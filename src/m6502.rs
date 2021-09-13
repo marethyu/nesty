@@ -320,6 +320,7 @@ impl M6502 {
             0x30 => { /* BMI oper; 2++c */      branch!(test_bit!(self.p, FLAG_N), true); }
             0xD0 => { /* BNE oper; 2++c */      branch!(test_bit!(self.p, FLAG_Z), false); }
             0x10 => { /* BPL oper; 2++c */      branch!(test_bit!(self.p, FLAG_N), false); }
+            0x00 => { /* BRK; 7c */             todo!("BRK not implemented yet!"); }
             0x50 => { /* BVC oper; 2++c */      branch!(test_bit!(self.p, FLAG_V), false); }
             0x70 => { /* BVS oper; 2++c */      branch!(test_bit!(self.p, FLAG_V), true); }
             0x18 => { /* CLC; 2c */             modify_bit!(self.p, FLAG_C, false); }
