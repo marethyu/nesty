@@ -1,36 +1,42 @@
 use crate::traits::IO;
 
-use std::fs;
+const RAM_SIZE: usize = 0x800;
+const PPU_REG_SIZE: usize = 0x8;
+const OTHER_SIZE: usize = 0x20;
+const CART_MEM_SIZE: usize = 0xBFE0;
 
 pub struct CPUBus {
-    mem: Vec<u8>
+    ram: [u8; RAM_SIZE],
+    ppu_regs: [u8; PPU_REG_SIZE], /* TODO replace this field with PPU in future impl */
+    other: [u8; OTHER_SIZE], /* TODO replace this field with other devices like joystick */
+    cart: [u8; CART_MEM_SIZE]
 }
 
-fn load_mem() -> Vec<u8> {
-    let mut mem = vec![0; 0x10000];
-    let cart = fs::read("roms/nestest.nes").unwrap();
-
-    for i in 0..0x4000 {
-        mem[0xC000 + i] = cart[i + 0x10];
+macro_rules! mirror {
+    ($base:expr, $addr:expr, $size:expr) => {
+        (($addr - $base) & (($size as u16) - 1)) as usize
     }
-
-    mem
 }
 
 impl CPUBus {
-    pub fn new() -> Self {
+    pub fn new(cart_mem: [u8; CART_MEM_SIZE]) -> Self {
         CPUBus {
-            mem: load_mem()
+            ram: [0; RAM_SIZE],
+            ppu_regs: [0; PPU_REG_SIZE],
+            other: [0; OTHER_SIZE],
+            cart: cart_mem
         }
     }
 }
 
 impl IO for CPUBus {
     fn read_byte(&self, addr: u16) -> u8 {
-        if addr <= 0x2000 {
-            self.mem[(addr & 0x7FF) as usize]
-        } else {
-            self.mem[addr as usize]
+        match addr {
+            0x0000..=0x1FFF => self.ram[mirror!(0x0000, addr, RAM_SIZE)],
+            0x2000..=0x3FFF => self.ppu_regs[mirror!(0x2000, addr, PPU_REG_SIZE)],
+            0x4000..=0x401F => self.other[mirror!(0x4000, addr, OTHER_SIZE)],
+            0x4020..=0xFFFF => self.cart[(addr - 0x4020) as usize],
+            _ => panic!("Address out of bounds: {:04X}", addr)
         }
     }
 
@@ -41,10 +47,13 @@ impl IO for CPUBus {
     }
 
     fn write_byte(&mut self, addr: u16, data: u8) {
-        if addr <= 0x2000 {
-            self.mem[(addr & 0x7FF) as usize] = data;
-        } else {
-            self.mem[addr as usize] = data;
+        /* TODO I think some address ranges are read only... */
+        match addr {
+            0x0000..=0x1FFF => { self.ram[mirror!(0x0000, addr, RAM_SIZE)] = data; }
+            0x2000..=0x3FFF => { self.ppu_regs[mirror!(0x2000, addr, PPU_REG_SIZE)] = data; }
+            0x4000..=0x401F => { self.other[mirror!(0x4000, addr, OTHER_SIZE)] = data; }
+            0x4020..=0xFFFF => { self.cart[(addr - 0x4020) as usize] = data; }
+            _ => panic!("Address out of bounds: {:04X}", addr)
         }
     }
 

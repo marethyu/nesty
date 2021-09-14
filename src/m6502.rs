@@ -1,6 +1,3 @@
-use std::rc::Rc;
-use std::cell::RefCell;
-
 use crate::traits::IO;
 use crate::cpubus::CPUBus;
 
@@ -34,12 +31,6 @@ enum AddressingMode {
     ZeroPageY
 }
 
-macro_rules! page_cross {
-    ($addr1:expr, $addr2:expr) => {
-        ($addr1 & 0xFF00) != ($addr2 & 0xFF00)
-    }
-}
-
 pub struct M6502 {
     a:      u8,
     x:      u8,
@@ -47,13 +38,19 @@ pub struct M6502 {
     p:      u8,
     sp:     u8,
     pc:     u16,
-    bus:    Rc<RefCell<CPUBus>>,
+    bus:    Option<CPUBus>,
     cycles: u32,
     total_cycles: u32
 }
 
+macro_rules! page_cross {
+    ($addr1:expr, $addr2:expr) => {
+        ($addr1 & 0xFF00) != ($addr2 & 0xFF00)
+    }
+}
+
 impl M6502 {
-    pub fn new(cpubus: CPUBus) -> Self {
+    pub fn new() -> Self {
         M6502 {
             a:      0,
             x:      0,
@@ -61,16 +58,20 @@ impl M6502 {
             p:      0x24,
             sp:     0xFD,
             pc:     0xC000,
-            bus:    Rc::new(RefCell::new(cpubus)),
+            bus:    None,
             cycles: 0,
             total_cycles: 7
         }
     }
 
+    pub fn load_bus(&mut self, bus: CPUBus) {
+        self.bus = Some(bus);
+    }
+
     pub fn step(&mut self) -> u32 {
         self.cycles = 0;
 
-        println!("{:04X}  {:02X}\t\t\t\t\t\t\t\t\t\tA:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}\t\t\t  CYC:{}", self.pc, self.bus.borrow().read_byte(self.pc), self.a, self.x, self.y, self.p, self.sp, self.total_cycles);
+        println!("{:04X}  {:02X}\t\t\t\t\t\t\t\t\t\tA:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}\t\t\t  CYC:{}", self.pc, self.bus.as_ref().unwrap().read_byte(self.pc), self.a, self.x, self.y, self.p, self.sp, self.total_cycles);
 
         macro_rules! do_add {
             /*  for idiots who have no idea how to determine overflow,
@@ -582,22 +583,22 @@ impl M6502 {
     }
 
     fn cpu_write_word(&mut self, addr: u16, data: u16) {
-        self.bus.borrow_mut().write_word(addr, data);
+        self.bus.as_mut().unwrap().write_word(addr, data);
         self.cycles += 2;
     }
 
     fn cpu_write_byte(&mut self, addr: u16, data: u8) {
-        self.bus.borrow_mut().write_byte(addr, data);
+        self.bus.as_mut().unwrap().write_byte(addr, data);
         self.cycles += 1;
     }
 
     fn cpu_read_word(&mut self, addr: u16) -> u16 {
         self.cycles += 2;
-        self.bus.borrow().read_word(addr)
+        self.bus.as_ref().unwrap().read_word(addr)
     }
 
     fn cpu_read_byte(&mut self, addr: u16) -> u8 {
         self.cycles += 1;
-        self.bus.borrow().read_byte(addr)
+        self.bus.as_ref().unwrap().read_byte(addr)
     }
 }
