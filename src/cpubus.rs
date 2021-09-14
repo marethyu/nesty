@@ -34,7 +34,7 @@ impl IO for CPUBus {
         match addr {
             0x0000..=0x1FFF => self.ram[mirror!(0x0000, addr, RAM_SIZE)],
             0x2000..=0x3FFF => self.ppu_regs[mirror!(0x2000, addr, PPU_REG_SIZE)],
-            0x4000..=0x401F => self.other[mirror!(0x4000, addr, OTHER_SIZE)],
+            0x4000..=0x401F => self.other[(addr - 0x4000) as usize],
             0x4020..=0xFFFF => self.cart[(addr - 0x4020) as usize],
             _ => panic!("Address out of bounds: {:04X}", addr)
         }
@@ -51,7 +51,7 @@ impl IO for CPUBus {
         match addr {
             0x0000..=0x1FFF => { self.ram[mirror!(0x0000, addr, RAM_SIZE)] = data; }
             0x2000..=0x3FFF => { self.ppu_regs[mirror!(0x2000, addr, PPU_REG_SIZE)] = data; }
-            0x4000..=0x401F => { self.other[mirror!(0x4000, addr, OTHER_SIZE)] = data; }
+            0x4000..=0x401F => { self.other[(addr - 0x4000) as usize] = data; }
             0x4020..=0xFFFF => { self.cart[(addr - 0x4020) as usize] = data; }
             _ => panic!("Address out of bounds: {:04X}", addr)
         }
