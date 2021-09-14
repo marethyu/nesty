@@ -2,10 +2,14 @@ mod bitops;
 mod traits;
 mod m6502;
 mod cpubus;
+mod opcodes;
 
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::fs;
+
+#[macro_use(lazy_static)]
+extern crate lazy_static;
 
 use m6502::M6502;
 use cpubus::CPUBus;

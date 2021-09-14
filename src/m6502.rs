@@ -1,5 +1,10 @@
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufWriter, Write};
+
 use crate::traits::IO;
 use crate::cpubus::CPUBus;
+use crate::opcodes;
 
 use crate::{test_bit, modify_bit};
 
@@ -12,15 +17,15 @@ const FLAG_I: u8 = 2;
 const FLAG_Z: u8 = 1;
 const FLAG_C: u8 = 0;
 
-enum AddressingMode {
-//  Accumulator,
+pub enum AddressingMode {
+    Accumulator,
     Absolute,
     AbsoluteX,
     AbsoluteXEc, /* AbsoluteX with an extra cycle */
     AbsoluteY,
     AbsoluteYEc, /* AbsoluteY with an extra cycle */
     Immediate,
-//  Implied,
+    Implied,
     Indirect,
     IndirectX,
     IndirectY,
@@ -40,7 +45,8 @@ pub struct M6502 {
     pc:     u16,
     bus:    Option<CPUBus>,
     cycles: u32,
-    total_cycles: u32
+    total_cycles: u32,
+    log_file: BufWriter<File>
 }
 
 macro_rules! page_cross {
@@ -60,7 +66,8 @@ impl M6502 {
             pc:     0xC000,
             bus:    None,
             cycles: 0,
-            total_cycles: 7
+            total_cycles: 7,
+            log_file: BufWriter::new(File::create("nesty.log").expect("Unable to create file"))
         }
     }
 
@@ -71,7 +78,7 @@ impl M6502 {
     pub fn step(&mut self) -> u32 {
         self.cycles = 0;
 
-        println!("{:04X}  {:02X}\t\t\t\t\t\t\t\t\t\tA:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}\t\t\t  CYC:{}", self.pc, self.bus.as_ref().unwrap().read_byte(self.pc), self.a, self.x, self.y, self.p, self.sp, self.total_cycles);
+        self.log_cpu_state();
 
         macro_rules! do_add {
             /*  for idiots who have no idea how to determine overflow,
@@ -454,6 +461,32 @@ impl M6502 {
         self.cycles
     }
 
+    fn log_cpu_state(&mut self) {
+        let ref opcodes: HashMap<u8, &'static opcodes::OpCode> = *opcodes::OPCODES_MAP;
+
+        macro_rules! write_string {
+            ($($arg:tt)*) => {
+                self.log_file.write(format!($($arg)*).as_bytes()).expect("Unable to write data");
+            }
+        }
+
+        let code = self.bus.as_ref().unwrap().read_byte(self.pc);
+        let opcode = opcodes
+            .get(&code)
+            .expect(&format!("OpCode {:02X} is not recognized", code));
+        write_string!("{:04X}  ", self.pc);
+
+        for i in 0..opcode.len {
+            write_string!("{:02X} ", self.bus.as_ref().unwrap().read_byte(self.pc + (i as u16)));
+        }
+        for i in 0..3-opcode.len {
+            write_string!("   ");
+        }
+        write_string!(" {}\t\t\t\t\t\t\t\t", opcode.mnemonic);
+
+        write_string!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}\t\t\t  CYC:{}\n", self.a, self.x, self.y, self.p, self.sp, self.total_cycles);
+    }
+
     fn pull_word(&mut self) -> u16 {
         let lo = self.pull_byte() as u16;
         let hi = self.pull_byte() as u16;
@@ -482,6 +515,7 @@ impl M6502 {
 
     fn fetch_address(&mut self, mode: AddressingMode) -> u16 {
         match mode {
+            AddressingMode::Accumulator => 0,
             AddressingMode::Absolute => self.fetch_word(),
             AddressingMode::AbsoluteX => {
                 let addr: u16 = self.fetch_word();
@@ -515,6 +549,7 @@ impl M6502 {
                 self.pc += 1;
                 self.pc - 1
             },
+            AddressingMode::Implied => 0,
             AddressingMode::Indirect => {
                 /* INDIRECT JUMP CAN'T CROSS PAGES!! */
                 let nnnn = self.fetch_word();
