@@ -7,12 +7,21 @@ mod opcodes;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::fs;
+use std::process;
+use std::thread;
+use std::time::Duration;
+
+use sdl2::event::Event;
+use sdl2::pixels::PixelFormatEnum;
 
 #[macro_use(lazy_static)]
 extern crate lazy_static;
 
 use m6502::M6502;
 use cpubus::CPUBus;
+
+const WIDTH: usize = 256;
+const HEIGHT: usize = 240;
 
 fn load_cart_mem() -> [u8; 0xBFE0] {
     let mut mem = [0; 0xBFE0];
@@ -25,13 +34,54 @@ fn load_cart_mem() -> [u8; 0xBFE0] {
     mem
 }
 
-fn main() {
+pub fn main() {
+    let sdl_context = sdl2::init().unwrap();
+    let video_subsystem = sdl_context.video().unwrap();
+
+    let window = video_subsystem.window("NESTY", (WIDTH * 2) as u32, (HEIGHT * 2) as u32)
+        .position_centered()
+        .build()
+        .unwrap();
+
+    let mut canvas = window.into_canvas().build().unwrap();
+    let texture_creator = canvas.texture_creator();
+
+    let mut texture = texture_creator
+        .create_texture_streaming(PixelFormatEnum::RGB24, WIDTH as u32, HEIGHT as u32)
+        .unwrap();
+
     let cpu = Rc::new(RefCell::new(M6502::new()));
     let cpu_bus = CPUBus::new(load_cart_mem());
 
     cpu.borrow_mut().load_bus(cpu_bus);
 
+    let mut pixels = [0 as u8; WIDTH * HEIGHT * 3];
+
+    let mut event_pump = sdl_context.event_pump().unwrap();
+
     loop {
+        for event in event_pump.poll_iter() {
+            match event {
+                Event::Quit { .. } => process::exit(0),
+                _ => {}
+            }
+        }
+
         let cycles = cpu.borrow_mut().step();
+
+        for y in 0..HEIGHT {
+            for x in 0..WIDTH {
+                let offset = y * WIDTH * 3 + x * 3;
+                pixels[offset    ] = 255;
+                pixels[offset + 1] = 0;
+                pixels[offset + 2] = 0;
+            }
+        }
+
+        texture.update(None, &pixels, WIDTH * 3).unwrap();
+        canvas.copy(&texture, None, None).unwrap();
+        canvas.present();
+
+        thread::sleep(Duration::from_millis(17));
     }
 }
