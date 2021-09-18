@@ -1,8 +1,9 @@
-mod bitops;
+mod macros;
 mod traits;
 mod cartridge;
 mod m6502;
 mod cpubus;
+mod ppubus;
 mod opcodes;
 
 use std::rc::Rc;
@@ -20,6 +21,7 @@ extern crate lazy_static;
 use cartridge::Cartridge;
 use m6502::M6502;
 use cpubus::CPUBus;
+use ppubus::PPUBus;
 
 const WIDTH: usize = 256;
 const HEIGHT: usize = 240;
@@ -41,8 +43,11 @@ pub fn main() {
         .unwrap();
 
     let cart = Cartridge::new("roms/nestest.nes");
+
     let cpu = Rc::new(RefCell::new(M6502::new()));
+
     let cpu_bus = CPUBus::new(cart.prg_rom);
+    let ppu_bus = PPUBus::new(cart.chr_rom, cart.mirroring_type);
 
     cpu.borrow_mut().load_bus(cpu_bus);
 

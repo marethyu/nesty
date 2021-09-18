@@ -1,5 +1,7 @@
 use crate::traits::IO;
 
+use crate::mirror;
+
 const RAM_SIZE: usize = 0x800;
 const PPU_REG_SIZE: usize = 0x8;
 const IO_REGS_SIZE: usize = 0x20;
@@ -24,12 +26,6 @@ pub struct CPUBus {
     cart_prg_rom: Vec<u8>
 }
 
-macro_rules! mirror {
-    ($base:expr, $addr:expr, $size:expr) => {
-        (($addr - $base) & (($size as u16) - 1)) as usize
-    }
-}
-
 impl CPUBus {
     pub fn new(prg_rom: Vec<u8>) -> Self {
         CPUBus {
@@ -49,8 +45,7 @@ impl IO for CPUBus {
             0x2000..=0x3FFF => self.ppu_regs[mirror!(0x2000, addr, PPU_REG_SIZE)],
             0x4000..=0x401F => self.io_regs[(addr - 0x4000) as usize],
             0x4020..=0x7FFF => self.cart_other[(addr - 0x4020) as usize],
-            0x8000..=0xFFFF => self.cart_prg_rom[mirror!(0x8000, addr, self.cart_prg_rom.len())],
-            _ => panic!("Address out of bounds: {:04X}", addr)
+            0x8000..=0xFFFF => self.cart_prg_rom[mirror!(0x8000, addr, self.cart_prg_rom.len())]
         }
     }
 
