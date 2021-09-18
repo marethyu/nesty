@@ -23,8 +23,10 @@ use m6502::M6502;
 use cpubus::CPUBus;
 use ppubus::PPUBus;
 
-const WIDTH: usize = 256;
-const HEIGHT: usize = 240;
+use traits::IO;
+
+const WIDTH: usize = 128; // 256
+const HEIGHT: usize = 256; // 240
 
 pub fn main() {
     let sdl_context = sdl2::init().unwrap();
@@ -56,17 +58,15 @@ pub fn main() {
     let mut event_pump = sdl_context.event_pump().unwrap();
 
     loop {
-        /*
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } => process::exit(0),
                 _ => {}
             }
-        }*/
+        }
 
         let cycles = cpu.borrow_mut().step();
-
-        /*
+/*
         for y in 0..HEIGHT {
             for x in 0..WIDTH {
                 let offset = y * WIDTH * 3 + x * 3;
@@ -75,11 +75,31 @@ pub fn main() {
                 pixels[offset + 2] = 0;
             }
         }
+*/
+        // Display pattern table
+        for y in 0..HEIGHT {
+            for x in 0..WIDTH {
+                let ty = y / 8;
+                let tx = x / 8;
+                let pt_idx = ty * 16 + tx;
+                let pt_addr = (pt_idx * 16) as u16;
+                let yoffset = y % 8;
+                let xoffset = x % 8;
+                let tlow = ppu_bus.read_byte(pt_addr + (yoffset as u16));
+                let thigh = ppu_bus.read_byte(pt_addr + (yoffset as u16) + 8);
+                let val = ((test_bit!(thigh, 7 - xoffset) as u8) << 1) | (test_bit!(tlow, 7 - xoffset) as u8);
+                let offset = y * WIDTH * 3 + x * 3;
+                let color = val * 85;
+                pixels[offset    ] = color;
+                pixels[offset + 1] = color;
+                pixels[offset + 2] = color;
+            }
+        }
 
         texture.update(None, &pixels, WIDTH * 3).unwrap();
         canvas.copy(&texture, None, None).unwrap();
         canvas.present();
 
-        thread::sleep(Duration::from_millis(17));*/
+        thread::sleep(Duration::from_millis(17));
     }
 }
