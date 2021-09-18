@@ -25,7 +25,14 @@ impl Cartridge {
             panic!("File is not in iNES file format");
         }
 
+        if ((rom[7] >> 2) & 0b11) != 0 {
+            panic!("NES2.0 format is not supported");
+        }
+
         let mapper_type = (rom[6] >> 4) | (rom[7] & 0b11110000);
+        if mapper_type != 0 {
+            panic!("Mapper must be NROM, other types are not supported yet");
+        }
 
         let mirroring_type = match (test_bit!(rom[6], 3), test_bit!(rom[6], 0)) {
             (false, false) => Mirroring::Vertical,
