@@ -479,7 +479,7 @@ impl M6502 {
         for i in 0..opcode.len {
             write_string!("{:02X} ", self.bus.as_ref().unwrap().read_byte(self.pc + (i as u16)));
         }
-        for i in 0..3-opcode.len {
+        for i in 0..(3-opcode.len) {
             write_string!("   ");
         }
         write_string!(" {}\t\t\t\t\t\t\t\t", opcode.mnemonic);
