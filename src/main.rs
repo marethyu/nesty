@@ -1,12 +1,12 @@
 mod bitops;
 mod traits;
+mod cartridge;
 mod m6502;
 mod cpubus;
 mod opcodes;
 
 use std::rc::Rc;
 use std::cell::RefCell;
-use std::fs;
 use std::process;
 use std::thread;
 use std::time::Duration;
@@ -17,22 +17,12 @@ use sdl2::pixels::PixelFormatEnum;
 #[macro_use(lazy_static)]
 extern crate lazy_static;
 
+use cartridge::Cartridge;
 use m6502::M6502;
 use cpubus::CPUBus;
 
 const WIDTH: usize = 256;
 const HEIGHT: usize = 240;
-
-fn load_cart_mem() -> [u8; 0xBFE0] {
-    let mut mem = [0; 0xBFE0];
-    let cart = fs::read("roms/nestest.nes").unwrap();
-
-    for i in 0..0x4000 {
-        mem[0xC000 - 0x4020 + i] = cart[i + 0x10];
-    }
-
-    mem
-}
 
 pub fn main() {
     let sdl_context = sdl2::init().unwrap();
@@ -50,8 +40,9 @@ pub fn main() {
         .create_texture_streaming(PixelFormatEnum::RGB24, WIDTH as u32, HEIGHT as u32)
         .unwrap();
 
+    let cart = Cartridge::new("roms/nestest.nes");
     let cpu = Rc::new(RefCell::new(M6502::new()));
-    let cpu_bus = CPUBus::new(load_cart_mem());
+    let cpu_bus = CPUBus::new(cart.prg_rom);
 
     cpu.borrow_mut().load_bus(cpu_bus);
 
@@ -60,15 +51,17 @@ pub fn main() {
     let mut event_pump = sdl_context.event_pump().unwrap();
 
     loop {
+        /*
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } => process::exit(0),
                 _ => {}
             }
-        }
+        }*/
 
         let cycles = cpu.borrow_mut().step();
 
+        /*
         for y in 0..HEIGHT {
             for x in 0..WIDTH {
                 let offset = y * WIDTH * 3 + x * 3;
@@ -82,6 +75,6 @@ pub fn main() {
         canvas.copy(&texture, None, None).unwrap();
         canvas.present();
 
-        thread::sleep(Duration::from_millis(17));
+        thread::sleep(Duration::from_millis(17));*/
     }
 }
