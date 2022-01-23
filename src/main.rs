@@ -52,6 +52,7 @@ pub fn main() {
     let ppu_bus = PPUBus::new(cart.chr_rom, cart.mirroring_type);
 
     cpu.borrow_mut().load_bus(cpu_bus);
+    cpu.borrow_mut().reset();
 
     let mut pixels = [0 as u8; WIDTH * HEIGHT * 3];
 

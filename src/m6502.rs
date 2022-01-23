@@ -63,7 +63,7 @@ impl M6502 {
             y:      0,
             p:      0x24,
             sp:     0xFD,
-            pc:     0xC000,
+            pc:     0, /* 0xC000 */
             bus:    None,
             cycles: 0,
             total_cycles: 7,
@@ -73,6 +73,17 @@ impl M6502 {
 
     pub fn load_bus(&mut self, bus: CPUBus) {
         self.bus = Some(bus);
+    }
+
+    pub fn reset(&mut self) {
+        self.a = 0;
+        self.x = 0;
+        self.p = 0;
+        // According to https://wiki.nesdev.org/w/index.php/CPU_memory_map, the reset vector is located at $FFFC-$FFFD
+        // However, if you are running nestest in an emulator without video, interrupts, etc. implemented, set PC to $C000
+        // to run the "automated" mode.
+        self.pc = 0xC000; // self.cpu_read_word(0xFFFC)
+        println!("Starting PC: {:04X}", self.pc);
     }
 
     pub fn step(&mut self) -> u32 {
