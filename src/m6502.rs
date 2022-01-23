@@ -17,6 +17,9 @@ const FLAG_I: u8 = 2;
 const FLAG_Z: u8 = 1;
 const FLAG_C: u8 = 0;
 
+const RESET_ADDR: u16 = 0xFFFC;
+const BRK_ADDR: u16 = 0xFFFE;
+
 pub enum AddressingMode {
     Accumulator,
     Absolute,
@@ -61,7 +64,7 @@ impl M6502 {
             a:      0,
             x:      0,
             y:      0,
-            p:      0x24,
+            p:      0,
             sp:     0xFD,
             pc:     0, /* 0xC000 */
             bus:    None,
@@ -78,11 +81,11 @@ impl M6502 {
     pub fn reset(&mut self) {
         self.a = 0;
         self.x = 0;
-        self.p = 0;
+        self.p = 0x24;
         // According to https://wiki.nesdev.org/w/index.php/CPU_memory_map, the reset vector is located at $FFFC-$FFFD
         // However, if you are running nestest in an emulator without video, interrupts, etc. implemented, set PC to $C000
         // to run the "automated" mode.
-        self.pc = 0xC000; // self.cpu_read_word(0xFFFC)
+        self.pc = 0xC000; // self.cpu_read_word(RESET_ADDR)
     }
 
     pub fn step(&mut self) -> u32 {
@@ -234,6 +237,30 @@ impl M6502 {
             }
         }
 
+        macro_rules! php {
+            () => {
+                self.push_byte(self.p | 0b00110000); stk_adjust_ph_cycles!();
+            };
+        }
+
+        // TODO verify
+        macro_rules! brk {
+            /*  BRK initiates a software interrupt similar to a hardware
+                interrupt (IRQ). The return address pushed to the stack is
+                PC+2, providing an extra byte of spacing for a break mark
+                (identifying a reason for the break.)
+                The status register will be pushed to the stack with the break
+                flag set to 1. However, when retrieved during RTI or by a PLP
+                instruction, the break flag will be ignored.
+                The interrupt disable flag is not set automatically. */
+            () => {
+                self.push_word(self.pc + 1);
+                self.push_byte(self.p | 0b00010000); stk_adjust_ph_cycles!();
+                modify_bit!(self.p, FLAG_I, 1);
+                self.pc = self.cpu_read_word(BRK_ADDR);
+            };
+        }
+
         macro_rules! shift_reg {
             ($reg:expr, $rl:literal, $logical:literal) => {
                 if $rl {
@@ -338,7 +365,7 @@ impl M6502 {
             0x30 => { /* BMI oper; 2++c */      branch!(test_bit!(self.p, FLAG_N), true); }
             0xD0 => { /* BNE oper; 2++c */      branch!(test_bit!(self.p, FLAG_Z), false); }
             0x10 => { /* BPL oper; 2++c */      branch!(test_bit!(self.p, FLAG_N), false); }
-            0x00 => { /* BRK; 7c */             todo!("BRK not implemented yet!"); }
+            0x00 => { /* BRK; 7c */             brk!(); }
             0x50 => { /* BVC oper; 2++c */      branch!(test_bit!(self.p, FLAG_V), false); }
             0x70 => { /* BVS oper; 2++c */      branch!(test_bit!(self.p, FLAG_V), true); }
             0x18 => { /* CLC; 2c */             modify_bit!(self.p, FLAG_C, false); }
@@ -415,7 +442,7 @@ impl M6502 {
             0x01 => { /* ORA (oper,X); 6c */    ora!(AddressingMode::IndirectX); }
             0x11 => { /* ORA (oper),Y; 5+c */   ora!(AddressingMode::IndirectY); }
             0x48 => { /* PHA; 3c */             self.push_byte(self.a); stk_adjust_ph_cycles!(); }
-            0x08 => { /* PHP; 3c */             self.push_byte(self.p | 0b00110000); stk_adjust_ph_cycles!(); }
+            0x08 => { /* PHP; 3c */             php!(); }
             0x68 => { /* PLA; 4c */             self.a = self.pull_byte(); self.modify_zn(self.a); stk_adjust_pl_cycles!(); }
             0x28 => { /* PLP; 4c */             pull_p!(); stk_adjust_pl_cycles!(); }
             0x2A => { /* ROL A; 2c */           shift_reg!(self.a, true, false); }
