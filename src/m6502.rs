@@ -83,7 +83,6 @@ impl M6502 {
         // However, if you are running nestest in an emulator without video, interrupts, etc. implemented, set PC to $C000
         // to run the "automated" mode.
         self.pc = 0xC000; // self.cpu_read_word(0xFFFC)
-        println!("Starting PC: {:04X}", self.pc);
     }
 
     pub fn step(&mut self) -> u32 {
