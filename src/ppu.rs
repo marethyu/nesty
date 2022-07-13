@@ -262,8 +262,8 @@ impl PPU {
                 //    | 1,0 | 1,1 |
                 //    +-----+-----+
                 // Remember that each block has 4x4 tiles
-                let block_row = (ty % 4) % 2;
-                let block_col = (tx % 4) % 2;
+                let block_row = (ty % 4) / 2;
+                let block_col = (tx % 4) / 2;
 
                 /* top left */
                 if block_row == 0 && block_col == 0 {
