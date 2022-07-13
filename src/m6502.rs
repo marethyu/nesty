@@ -2,9 +2,10 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
-use crate::traits::IO;
-use crate::cpubus::CPUBus;
+use crate::bus::Bus;
 use crate::opcodes;
+
+use crate::traits::IO;
 
 use crate::{test_bit, modify_bit};
 
@@ -17,7 +18,9 @@ const FLAG_I: u8 = 2;
 const FLAG_Z: u8 = 1;
 const FLAG_C: u8 = 0;
 
+const NMI_ADDR: u16 = 0xFFFA;
 const RESET_ADDR: u16 = 0xFFFC;
+const IRQ_ADDR: u16 = 0xFFFE;
 const BRK_ADDR: u16 = 0xFFFE;
 
 pub enum AddressingMode {
@@ -46,10 +49,11 @@ pub struct M6502 {
     p:      u8,
     sp:     u8,
     pc:     u16,
-    bus:    Option<CPUBus>,
-    cycles: u32,
-    total_cycles: u32,
-    log_file: BufWriter<File>
+
+    log_file: BufWriter<File>,
+
+    pub bus: Bus,
+    pub total_cycles: u64 // TODO what to do if overflow?
 }
 
 macro_rules! page_cross {
@@ -59,38 +63,58 @@ macro_rules! page_cross {
 }
 
 impl M6502 {
-    pub fn new() -> Self {
+    pub fn new(bus: Bus) -> Self {
         M6502 {
             a:      0,
             x:      0,
             y:      0,
             p:      0,
-            sp:     0xFD,
-            pc:     0, /* 0xC000 */
-            bus:    None,
-            cycles: 0,
-            total_cycles: 7,
-            log_file: BufWriter::new(File::create("nesty.log").expect("Unable to create file"))
+            sp:     0,
+            pc:     0,
+            log_file: BufWriter::new(File::create("nesty.log").expect("Unable to create file")),
+            bus: bus,
+            total_cycles: 0
         }
     }
 
-    pub fn load_bus(&mut self, bus: CPUBus) {
-        self.bus = Some(bus);
-    }
-
+    // Call when you power on the device
     pub fn reset(&mut self) {
         self.a = 0;
         self.x = 0;
-        self.p = 0x24;
+        self.y = 0;
+        self.p = 0x34; // normally 0x34 but if running nestest use 0x24 instead
+        self.sp = 0xFD;
         // According to https://wiki.nesdev.org/w/index.php/CPU_memory_map, the reset vector is located at $FFFC-$FFFD
         // However, if you are running nestest in an emulator without video, interrupts, etc. implemented, set PC to $C000
         // to run the "automated" mode.
-        self.pc = 0xC000; // self.cpu_read_word(RESET_ADDR)
+        self.pc = self.cpu_read_word(RESET_ADDR);
+
+        self.total_cycles += 5; // reset takes the total of 7 cycles
     }
 
-    pub fn step(&mut self) -> u32 {
-        self.cycles = 0;
+    pub fn irq(&mut self) {
+        // Check if interrupts are allowed
+        if test_bit!(self.p, FLAG_I) { return; }
 
+        self.push_word(self.pc);
+        // For more information, see https://www.nesdev.org/wiki/Status_flags#The_B_flag
+        self.push_byte(self.p | 0b00100000);
+        modify_bit!(self.p, FLAG_I, true);
+        self.pc = self.cpu_read_word(IRQ_ADDR);
+
+        self.total_cycles += 2; // irq takes the total of 7 cycles
+    }
+
+    // This interrupt cannot be skipped but its overall behaviour is same as irq
+    pub fn nmi(&mut self) {
+        self.push_word(self.pc);
+        self.push_byte(self.p | 0b00100000);
+        modify_bit!(self.p, FLAG_I, true);
+        self.pc = self.cpu_read_word(NMI_ADDR);
+        self.total_cycles += 2;
+    }
+
+    pub fn tick(&mut self) {
         self.log_cpu_state();
 
         macro_rules! do_add {
@@ -136,9 +160,9 @@ impl M6502 {
                 let new_pc = self.fetch_address(AddressingMode::Relative);
                 if $cond == $test {
                     if page_cross!(self.pc, new_pc) {
-                        self.cycles += 2;
+                        self.total_cycles += 2;
                     } else {
-                        self.cycles += 1;
+                        self.total_cycles += 1;
                     }
                     self.pc = new_pc;
                 }
@@ -179,7 +203,7 @@ impl M6502 {
                 let mut val = self.cpu_read_byte(addr);
                 val = val.wrapping_add(1);
                 self.modify_zn(val);
-                self.cycles += 1; // dummy write
+                self.total_cycles += 1; // dummy write
                 self.cpu_write_byte(addr, val);
             }
         }
@@ -190,7 +214,7 @@ impl M6502 {
                 let mut val = self.cpu_read_byte(addr);
                 val = val.wrapping_sub(1);
                 self.modify_zn(val);
-                self.cycles += 1; // dummy write
+                self.total_cycles += 1; // dummy write
                 self.cpu_write_byte(addr, val);
             }
         }
@@ -255,8 +279,8 @@ impl M6502 {
                 The interrupt disable flag is not set automatically. */
             () => {
                 self.push_word(self.pc + 1);
-                self.push_byte(self.p | 0b00010000); stk_adjust_ph_cycles!();
-                modify_bit!(self.p, FLAG_I, 1);
+                self.push_byte(self.p | 0b00110000); stk_adjust_ph_cycles!(); // TODO bits 5?
+                modify_bit!(self.p, FLAG_I, true); // TODO is it necessary??
                 self.pc = self.cpu_read_word(BRK_ADDR);
             };
         }
@@ -302,20 +326,20 @@ impl M6502 {
                     modify_bit!(self.p, FLAG_C, new_cfv);
                 }
                 self.modify_zn(val);
-                self.cycles += 1; // dummy write
+                self.total_cycles += 1; // dummy write
                 self.cpu_write_byte(addr, val);
             }
         }
 
         macro_rules! stk_adjust_pl_cycles {
             () => {
-                self.cycles += 2;
+                self.total_cycles += 2;
             }
         }
 
         macro_rules! stk_adjust_ph_cycles {
             () => {
-                self.cycles += 1;
+                self.total_cycles += 1;
             }
         }
 
@@ -352,7 +376,7 @@ impl M6502 {
             0x39 => { /* AND oper,Y; 4+c */     and!(AddressingMode::AbsoluteY); }
             0x21 => { /* AND (oper,X); 6c */    and!(AddressingMode::IndirectX); }
             0x31 => { /* AND (oper),Y; 5+c */   and!(AddressingMode::IndirectY); }
-            0x0A => { /* ASL A; 2c */           shift_reg!(self.a, true, true); }
+            0x0A => { /* ASL A; 2c */           shift_reg!(self.a, true, true); self.total_cycles += 1; }
             0x06 => { /* ASL oper; 5c */        shift_mem!(AddressingMode::ZeroPage, true, true); }
             0x16 => { /* ASL oper,X; 6c */      shift_mem!(AddressingMode::ZeroPageX, true, true); }
             0x0E => { /* ASL oper; 6c */        shift_mem!(AddressingMode::Absolute, true, true); }
@@ -368,10 +392,10 @@ impl M6502 {
             0x00 => { /* BRK; 7c */             brk!(); }
             0x50 => { /* BVC oper; 2++c */      branch!(test_bit!(self.p, FLAG_V), false); }
             0x70 => { /* BVS oper; 2++c */      branch!(test_bit!(self.p, FLAG_V), true); }
-            0x18 => { /* CLC; 2c */             modify_bit!(self.p, FLAG_C, false); }
-            0xD8 => { /* CLD; 2c */             modify_bit!(self.p, FLAG_D, false); }
-            0x58 => { /* CLI; 2c */             modify_bit!(self.p, FLAG_I, false); }
-            0xB8 => { /* CLV; 2c */             modify_bit!(self.p, FLAG_V, false); }
+            0x18 => { /* CLC; 2c */             modify_bit!(self.p, FLAG_C, false); self.total_cycles += 1; }
+            0xD8 => { /* CLD; 2c */             modify_bit!(self.p, FLAG_D, false); self.total_cycles += 1; }
+            0x58 => { /* CLI; 2c */             modify_bit!(self.p, FLAG_I, false); self.total_cycles += 1; }
+            0xB8 => { /* CLV; 2c */             modify_bit!(self.p, FLAG_V, false); self.total_cycles += 1; }
             0xC9 => { /* CMP #oper; 2c */       compare!(self.a, AddressingMode::Immediate); }
             0xC5 => { /* CMP oper; 3c */        compare!(self.a, AddressingMode::ZeroPage); }
             0xD5 => { /* CMP oper,X; 4c */      compare!(self.a, AddressingMode::ZeroPageX); }
@@ -390,8 +414,8 @@ impl M6502 {
             0xD6 => { /* DEC oper,X; 6c */      dec_mem!(AddressingMode::ZeroPageX); }
             0xCE => { /* DEC oper; 6c */        dec_mem!(AddressingMode::Absolute); }
             0xDE => { /* DEC oper,X; 7c */      dec_mem!(AddressingMode::AbsoluteXEc); }
-            0xCA => { /* DEX; 2c */             dec_reg!(self.x); }
-            0x88 => { /* DEY; 2c */             dec_reg!(self.y); }
+            0xCA => { /* DEX; 2c */             dec_reg!(self.x); self.total_cycles += 1; }
+            0x88 => { /* DEY; 2c */             dec_reg!(self.y); self.total_cycles += 1; }
             0x49 => { /* EOR #oper; 2c */       eor!(AddressingMode::Immediate); }
             0x45 => { /* EOR oper; 3c */        eor!(AddressingMode::ZeroPage); }
             0x55 => { /* EOR oper,X; 4c */      eor!(AddressingMode::ZeroPageX); }
@@ -404,8 +428,8 @@ impl M6502 {
             0xF6 => { /* INC oper,X; 6c */      inc_mem!(AddressingMode::ZeroPageX); }
             0xEE => { /* INC oper; 6c */        inc_mem!(AddressingMode::Absolute); }
             0xFE => { /* INC oper,X; 7c */      inc_mem!(AddressingMode::AbsoluteXEc); }
-            0xE8 => { /* INX; 2c */             inc_reg!(self.x); }
-            0xC8 => { /* INY; 2c */             inc_reg!(self.y); }
+            0xE8 => { /* INX; 2c */             inc_reg!(self.x); self.total_cycles += 1; }
+            0xC8 => { /* INY; 2c */             inc_reg!(self.y); self.total_cycles += 1; }
             0x4C => { /* JMP oper; 3c */        jump!(AddressingMode::Absolute); }
             0x6C => { /* JMP (oper); 5c */      jump!(AddressingMode::Indirect); }
             0x20 => { /* JSR oper; 6c */        self.push_word(self.pc + 1); jump!(AddressingMode::Absolute); stk_adjust_ph_cycles!(); }
@@ -427,12 +451,12 @@ impl M6502 {
             0xB4 => { /* LDY oper,X; 4c */      load!(self.y, AddressingMode::ZeroPageX); }
             0xAC => { /* LDY oper; 4c */        load!(self.y, AddressingMode::Absolute); }
             0xBC => { /* LDY oper,X; 4+c */     load!(self.y, AddressingMode::AbsoluteX); }
-            0x4A => { /* LSR A; 2c */           shift_reg!(self.a, false, true); }
+            0x4A => { /* LSR A; 2c */           shift_reg!(self.a, false, true); self.total_cycles += 1; }
             0x46 => { /* LSR oper; 5c */        shift_mem!(AddressingMode::ZeroPage, false, true); }
             0x56 => { /* LSR oper,X; 6c */      shift_mem!(AddressingMode::ZeroPageX, false, true); }
             0x4E => { /* LSR oper; 6c */        shift_mem!(AddressingMode::Absolute, false, true); }
             0x5E => { /* LSR oper,X; 7c */      shift_mem!(AddressingMode::AbsoluteXEc, false, true); }
-            0xEA => { /* NOP; 2c */ }
+            0xEA => { /* NOP; 2c */             self.total_cycles += 1; }
             0x09 => { /* ORA #oper; 2c */       ora!(AddressingMode::Immediate); }
             0x05 => { /* ORA oper; 3c */        ora!(AddressingMode::ZeroPage); }
             0x15 => { /* ORA oper,X; 4c */      ora!(AddressingMode::ZeroPageX); }
@@ -445,18 +469,18 @@ impl M6502 {
             0x08 => { /* PHP; 3c */             php!(); }
             0x68 => { /* PLA; 4c */             self.a = self.pull_byte(); self.modify_zn(self.a); stk_adjust_pl_cycles!(); }
             0x28 => { /* PLP; 4c */             pull_p!(); stk_adjust_pl_cycles!(); }
-            0x2A => { /* ROL A; 2c */           shift_reg!(self.a, true, false); }
+            0x2A => { /* ROL A; 2c */           shift_reg!(self.a, true, false); self.total_cycles += 1; }
             0x26 => { /* ROL oper; 5c */        shift_mem!(AddressingMode::ZeroPage, true, false); }
             0x36 => { /* ROL oper,X; 6c */      shift_mem!(AddressingMode::ZeroPageX, true, false); }
             0x2E => { /* ROL oper; 6c */        shift_mem!(AddressingMode::Absolute, true, false); }
             0x3E => { /* ROL oper,X; 7c */      shift_mem!(AddressingMode::AbsoluteXEc, true, false); }
-            0x6A => { /* ROR A; 2c */           shift_reg!(self.a, false, false); }
+            0x6A => { /* ROR A; 2c */           shift_reg!(self.a, false, false); self.total_cycles += 1; }
             0x66 => { /* ROR oper; 5c */        shift_mem!(AddressingMode::ZeroPage, false, false); }
             0x76 => { /* ROR oper,X; 6c */      shift_mem!(AddressingMode::ZeroPageX, false, false); }
             0x6E => { /* ROR oper; 6c */        shift_mem!(AddressingMode::Absolute, false, false); }
             0x7E => { /* ROR oper,X; 7c */      shift_mem!(AddressingMode::AbsoluteXEc, false, false); }
             0x40 => { /* RTI; 6c */             pull_p!(); self.pc = self.pull_word(); stk_adjust_pl_cycles!(); }
-            0x60 => { /* RTS; 6c */             self.pc = self.pull_word() + 1; stk_adjust_pl_cycles!(); self.cycles += 1; }
+            0x60 => { /* RTS; 6c */             self.pc = self.pull_word() + 1; stk_adjust_pl_cycles!(); self.total_cycles += 1; }
             0xE9 => { /* SBC #oper; 2c */       sbc!(AddressingMode::Immediate); }
             0xE5 => { /* SBC oper; 3c */        sbc!(AddressingMode::ZeroPage); }
             0xF5 => { /* SBC oper,X; 4c */      sbc!(AddressingMode::ZeroPageX); }
@@ -465,9 +489,9 @@ impl M6502 {
             0xF9 => { /* SBC oper,Y; 4+c */     sbc!(AddressingMode::AbsoluteY); }
             0xE1 => { /* SBC (oper,X); 6c */    sbc!(AddressingMode::IndirectX); }
             0xF1 => { /* SBC (oper),Y; 5+c */   sbc!(AddressingMode::IndirectY); }
-            0x38 => { /* SEC; 2c */             modify_bit!(self.p, FLAG_C, true); }
-            0xF8 => { /* SED; 2c */             modify_bit!(self.p, FLAG_D, true); }
-            0x78 => { /* SEI; 2c */             modify_bit!(self.p, FLAG_I, true); }
+            0x38 => { /* SEC; 2c */             modify_bit!(self.p, FLAG_C, true); self.total_cycles += 1; }
+            0xF8 => { /* SED; 2c */             modify_bit!(self.p, FLAG_D, true); self.total_cycles += 1; }
+            0x78 => { /* SEI; 2c */             modify_bit!(self.p, FLAG_I, true); self.total_cycles += 1; }
             0x85 => { /* STA oper; 3c */        store!(self.a, AddressingMode::ZeroPage); }
             0x95 => { /* STA oper,X; 4c */      store!(self.a, AddressingMode::ZeroPageX); }
             0x8D => { /* STA oper; 4c */        store!(self.a, AddressingMode::Absolute); }
@@ -481,21 +505,14 @@ impl M6502 {
             0x84 => { /* STY oper; 3c */        store!(self.y, AddressingMode::ZeroPage); }
             0x94 => { /* STY oper,X; 4c */      store!(self.y, AddressingMode::ZeroPageX); }
             0x8C => { /* STY oper; 4c */        store!(self.y, AddressingMode::Absolute); }
-            0xAA => { /* TAX; 2c */             transfer!(self.a, self.x); }
-            0xA8 => { /* TAY; 2c */             transfer!(self.a, self.y); }
-            0xBA => { /* TSX; 2c */             transfer!(self.sp, self.x); }
-            0x8A => { /* TXA; 2c */             transfer!(self.x, self.a); }
-            0x9A => { /* TXS; 2c */             self.sp = self.x; }
-            0x98 => { /* TYA; 2c */             transfer!(self.y, self.a); }
+            0xAA => { /* TAX; 2c */             transfer!(self.a, self.x); self.total_cycles += 1; }
+            0xA8 => { /* TAY; 2c */             transfer!(self.a, self.y); self.total_cycles += 1; }
+            0xBA => { /* TSX; 2c */             transfer!(self.sp, self.x); self.total_cycles += 1; }
+            0x8A => { /* TXA; 2c */             transfer!(self.x, self.a); self.total_cycles += 1; }
+            0x9A => { /* TXS; 2c */             self.sp = self.x; self.total_cycles += 1; }
+            0x98 => { /* TYA; 2c */             transfer!(self.y, self.a); self.total_cycles += 1; }
             _ => todo!("Halted at PC={:04X}; Unimplemented opcode: {:02X}", self.pc - 1, opcode)
         }
-
-        if self.cycles < 2 {
-            self.cycles += 1;
-        }
-        self.total_cycles += self.cycles;
-
-        self.cycles
     }
 
     fn log_cpu_state(&mut self) {
@@ -507,14 +524,14 @@ impl M6502 {
             }
         }
 
-        let code = self.bus.as_ref().unwrap().read_byte(self.pc);
+        let code = self.bus.read_byte(self.pc);
         let opcode = opcodes
             .get(&code)
             .expect(&format!("OpCode {:02X} is not recognized", code));
         write_string!("{:04X}  ", self.pc);
 
         for i in 0..opcode.len {
-            write_string!("{:02X} ", self.bus.as_ref().unwrap().read_byte(self.pc + (i as u16)));
+            write_string!("{:02X} ", self.bus.read_byte(self.pc + (i as u16)));
         }
         for i in 0..(3-opcode.len) {
             write_string!("   ");
@@ -558,28 +575,28 @@ impl M6502 {
                 let addr: u16 = self.fetch_word();
                 let eff_addr: u16 = addr.wrapping_add(self.x as u16);
                 if page_cross!(addr, eff_addr) {
-                    self.cycles += 1;
+                    self.total_cycles += 1;
                 }
                 eff_addr
             },
             AddressingMode::AbsoluteXEc => {
                 let addr: u16 = self.fetch_word();
                 let eff_addr: u16 = addr.wrapping_add(self.x as u16);
-                self.cycles += 1;
+                self.total_cycles += 1;
                 eff_addr
             },
             AddressingMode::AbsoluteY => {
                 let addr: u16 = self.fetch_word();
                 let eff_addr: u16 = addr.wrapping_add(self.y as u16);
                 if page_cross!(addr, eff_addr) {
-                    self.cycles += 1;
+                    self.total_cycles += 1;
                 }
                 eff_addr
             },
             AddressingMode::AbsoluteYEc => {
                 let addr: u16 = self.fetch_word();
                 let eff_addr: u16 = addr.wrapping_add(self.y as u16);
-                self.cycles += 1;
+                self.total_cycles += 1;
                 eff_addr
             },
             AddressingMode::Immediate => {
@@ -596,7 +613,7 @@ impl M6502 {
             },
             AddressingMode::IndirectX => {
                 let nn = self.fetch_byte();
-                self.cycles += 1; // simulate a throwaway read `self.cpu_read_byte(nn)` (for incrementing nn)
+                self.total_cycles += 1; // simulate a throwaway read `self.cpu_read_byte(nn)` (for incrementing nn)
                 let eff_addr = self.read_zp16(nn.wrapping_add(self.x));
                 eff_addr
             },
@@ -605,7 +622,7 @@ impl M6502 {
                 let addr: u16 = self.read_zp16(nn);
                 let eff_addr: u16 = addr.wrapping_add(self.y as u16);
                 if page_cross!(addr, eff_addr) {
-                    self.cycles += 1;
+                    self.total_cycles += 1;
                 }
                 eff_addr
             },
@@ -613,7 +630,7 @@ impl M6502 {
                 let nn = self.fetch_byte();
                 let addr: u16 = self.read_zp16(nn);
                 let eff_addr: u16 = addr.wrapping_add(self.y as u16);
-                self.cycles += 1;
+                self.total_cycles += 1;
                 eff_addr
             },
             AddressingMode::Relative => {
@@ -625,12 +642,12 @@ impl M6502 {
             },
             AddressingMode::ZeroPageX => {
                 let nn = self.fetch_byte();
-                self.cycles += 1; // simulate a throwaway read `self.cpu_read_byte(nn)` (for incrementing nn)
+                self.total_cycles += 1; // simulate a throwaway read `self.cpu_read_byte(nn)` (for incrementing nn)
                 nn.wrapping_add(self.x) as u16
             },
             AddressingMode::ZeroPageY => {
                 let nn = self.fetch_byte();
-                self.cycles += 1; // simulate a throwaway read `self.cpu_read_byte(nn)` (for incrementing nn)
+                self.total_cycles += 1; // simulate a throwaway read `self.cpu_read_byte(nn)` (for incrementing nn)
                 nn.wrapping_add(self.y) as u16
             }
         }
@@ -655,22 +672,22 @@ impl M6502 {
     }
 
     fn cpu_write_word(&mut self, addr: u16, data: u16) {
-        self.bus.as_mut().unwrap().write_word(addr, data);
-        self.cycles += 2;
+        self.bus.write_word(addr, data);
+        self.total_cycles += 2;
     }
 
     fn cpu_write_byte(&mut self, addr: u16, data: u8) {
-        self.bus.as_mut().unwrap().write_byte(addr, data);
-        self.cycles += 1;
+        self.bus.write_byte(addr, data);
+        self.total_cycles += 1;
     }
 
     fn cpu_read_word(&mut self, addr: u16) -> u16 {
-        self.cycles += 2;
-        self.bus.as_ref().unwrap().read_word(addr)
+        self.total_cycles += 2;
+        self.bus.read_word(addr)
     }
 
     fn cpu_read_byte(&mut self, addr: u16) -> u8 {
-        self.cycles += 1;
-        self.bus.as_ref().unwrap().read_byte(addr)
+        self.total_cycles += 1;
+        self.bus.read_byte(addr)
     }
 }

@@ -8,7 +8,11 @@ macro_rules! test_bit {
 #[macro_export]
 macro_rules! modify_bit {
     ($n:expr, $pos:expr, $is_set:expr) => {
-        $n = ($n & !(1 << $pos)) | (($is_set as u8) << $pos);
+        if $is_set {
+            $n |= (1 << $pos);
+        } else {
+            $n &= !(1 << $pos);
+        }
     }
 }
 

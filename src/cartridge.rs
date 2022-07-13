@@ -6,8 +6,7 @@ const INES_IDENT: [u8; 4] = [0x4E, 0x45, 0x53, 0x1A];
 
 pub enum Mirroring {
     Vertical,
-    Horizontial,
-    FourScreen
+    Horizontial
 }
 
 pub struct Cartridge {
@@ -34,10 +33,10 @@ impl Cartridge {
             panic!("Mapper must be NROM, other types are not supported yet");
         }
 
-        let mirroring_type = match (test_bit!(rom[6], 3), test_bit!(rom[6], 0)) {
-            (false, false) => Mirroring::Vertical,
-            (false, true) => Mirroring::Horizontial,
-            (true, _) => Mirroring::FourScreen
+        let mirroring_type = if test_bit!(rom[6], 0) {
+            Mirroring::Vertical
+        } else {
+            Mirroring::Horizontial
         };
 
         let prg_rom_size = rom[4] as usize * 0x4000;
