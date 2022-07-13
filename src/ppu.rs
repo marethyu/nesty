@@ -206,6 +206,10 @@ impl PPU {
                 if self.scanline == 0 && self.cycle == 0 && self.odd_frame {
                     self.cycle += 1; // skip if odd
                 }
+
+                if self.scanline >= 0 && self.cycle == 258 {
+                    self.render_scanline();
+                }
             }
             240 => {      /* Post render scanline */
             }
@@ -230,89 +234,90 @@ impl PPU {
         }
     }
 
-    pub fn render_bkgd(&mut self) {
-        if !self.render_background {
-            return;
+    pub fn render_scanline(&mut self) {
+        if self.render_background {
+            self.render_bkgd();
         }
+    }
 
+    fn render_bkgd(&mut self) {
         // Display nametable 0 for now...
+
+        let ty = (self.scanline / 8) as u16; // which tile?
+        let y = (self.scanline as u16) % 8; // which row?
 
         let pattstart = if self.bkgd_pattern { PT1_START } else { PT0_START };
 
-        for ty in 0..30 {
-            for tx in 0..32 {
-                let tile_addr = NT_START + ty * 32 + tx;
-                let tile_id = self.read_byte(tile_addr);
+        for tx in 0..32 {
+            let tile_addr = NT_START + ty * 32 + tx;
+            let tile_id = self.read_byte(tile_addr);
 
-                // Format for attribute table byte: BR BL TR TL
-                //              +----+----+
-                //              | TL | TR |
-                //              +----+----+
-                //              | BL | BR |
-                //              +----+----+
-                // Remember that each byte in attribute table corresponds to a 2x2 block (each of the 4 block sections is a group of 2x2 tiles) on nametable
-                let attr_addr = AT_START + (ty / 4) * 8 + (tx / 4);
-                let attr = self.read_byte(attr_addr);
-                let tile_palno: u8;
+            // Format for attribute table byte: BR BL TR TL
+            //              +----+----+
+            //              | TL | TR |
+            //              +----+----+
+            //              | BL | BR |
+            //              +----+----+
+            // Remember that each byte in attribute table corresponds to a 2x2 block (each of the 4 block sections is a group of 2x2 tiles) on nametable
+            let attr_addr = AT_START + (ty / 4) * 8 + (tx / 4);
+            let attr = self.read_byte(attr_addr);
+            let tile_palno: u8;
 
-                // Block's row and column (row,col)
-                //    +----+------+
-                //    | 0,0 | 0,1 |
-                //    +-----+-----+
-                //    | 1,0 | 1,1 |
-                //    +-----+-----+
-                // Remember that each block has 4x4 tiles
-                let block_row = (ty % 4) / 2;
-                let block_col = (tx % 4) / 2;
+            // Block's row and column (row,col)
+            //    +----+------+
+            //    | 0,0 | 0,1 |
+            //    +-----+-----+
+            //    | 1,0 | 1,1 |
+            //    +-----+-----+
+            // Remember that each block has 4x4 tiles
+            let block_row = (ty % 4) / 2;
+            let block_col = (tx % 4) / 2;
 
-                /* top left */
-                if block_row == 0 && block_col == 0 {
-                    tile_palno =  attr & 0b00000011;
-                }
-                /* top right */
-                else if block_row == 0 && block_col == 1 {
-                    tile_palno = (attr & 0b00001100) >> 2;
-                }
-                /* bottom left */
-                else if block_row == 1 && block_col == 0 {
-                    tile_palno = (attr & 0b00110000) >> 4;
-                }
-                /* bottom right */
-                else {
-                    tile_palno = (attr & 0b11000000) >> 6;
-                }
+            /* top left */
+            if block_row == 0 && block_col == 0 {
+                tile_palno =  attr & 0b00000011;
+            }
+            /* top right */
+            else if block_row == 0 && block_col == 1 {
+                tile_palno = (attr & 0b00001100) >> 2;
+            }
+            /* bottom left */
+            else if block_row == 1 && block_col == 0 {
+                tile_palno = (attr & 0b00110000) >> 4;
+            }
+            /* bottom right */
+            else {
+                tile_palno = (attr & 0b11000000) >> 6;
+            }
 
-                // The first colour in frame palette is universal background colour
-                // Note that addresses $3F04/$3F08/$3F0C can contain unique data
-                let palette_start = FRAME_PAL_START + (tile_palno as u16) * 4;
-                let sys_palette_idx = [self.read_byte(FRAME_PAL_START) as usize,
-                                       self.read_byte(palette_start + 1) as usize,
-                                       self.read_byte(palette_start + 2) as usize,
-                                       self.read_byte(palette_start + 3) as usize];
+            // The first colour in frame palette is universal background colour
+            // Note that addresses $3F04/$3F08/$3F0C can contain unique data
+            let palette_start = FRAME_PAL_START + (tile_palno as u16) * 4;
+            let sys_palette_idx = [self.read_byte(FRAME_PAL_START) as usize,
+                                   self.read_byte(palette_start + 1) as usize,
+                                   self.read_byte(palette_start + 2) as usize,
+                                   self.read_byte(palette_start + 3) as usize];
 
-                for y in 0..8 {
-                    let mut lo = self.read_byte(pattstart + (tile_id as u16) * 16 + y);
-                    let mut hi = self.read_byte(pattstart + (tile_id as u16) * 16 + y + 8);
+            let mut lo = self.read_byte(pattstart + (tile_id as u16) * 16 + y);
+            let mut hi = self.read_byte(pattstart + (tile_id as u16) * 16 + y + 8);
 
-                    for x in 0..8 {
-                        let low = test_bit!(lo, 7) as u16;
-                        let high = test_bit!(hi, 7) as u16;
-                        let colour_idx = ((high << 1) | low) as usize;
+            for x in 0..8 {
+                let low = test_bit!(lo, 7) as u16;
+                let high = test_bit!(hi, 7) as u16;
+                let colour_idx = ((high << 1) | low) as usize;
 
-                        let rgb = SYSTEM_PALLETE[sys_palette_idx[colour_idx]];
+                let rgb = SYSTEM_PALLETE[sys_palette_idx[colour_idx]];
 
-                        let xpos = (tx * 8 + x) as usize;
-                        let ypos = (ty * 8 + y) as usize;
-                        let offset = ypos * WIDTH * 3 + xpos * 3;
+                let xpos = (tx * 8 + x) as usize;
+                let ypos = (ty * 8 + y) as usize;
+                let offset = ypos * WIDTH * 3 + xpos * 3;
 
-                        self.pixels[offset    ] = rgb.0;
-                        self.pixels[offset + 1] = rgb.1;
-                        self.pixels[offset + 2] = rgb.2;
+                self.pixels[offset    ] = rgb.0;
+                self.pixels[offset + 1] = rgb.1;
+                self.pixels[offset + 2] = rgb.2;
 
-                        lo <<= 1;
-                        hi <<= 1;
-                    }
-                }
+                lo <<= 1;
+                hi <<= 1;
             }
         }
     }
