@@ -122,9 +122,11 @@ impl M6502 {
                 please read http://users.telenet.be/kim1-6502/6502/proman.html#362 */
             ($nn:expr) => {
                 let val = $nn;
-                let carry = test_bit!(self.p, FLAG_C) as u8;
+                let carry = test_bit!(self.p, FLAG_C) as u16;
                 let signbits_same1 = test_bit!(self.a ^ val, 7);
-                let (res, cf) = self.a.overflowing_add(val + carry);
+                let sum = (self.a as u16) + carry + (val as u16);
+                let cf = sum > 0xFF;
+                let res = sum as u8;
                 let signbits_same2 = test_bit!(self.a ^ res, 7);
                 self.a = res;
                 self.modify_zn(self.a);
