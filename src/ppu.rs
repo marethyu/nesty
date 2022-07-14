@@ -393,6 +393,10 @@ impl PPU {
                 }
 
                 for x in 0..8 {
+                    if (spr_x as u16) + (x as u16) >= (WIDTH as u16) {
+                        break;
+                    }
+
                     let low = test_bit!(lo, 7 - x) as u16;
                     let high = test_bit!(hi, 7 - x) as u16;
                     let colour_idx = ((high << 1) | low) as usize;
