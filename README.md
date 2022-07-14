@@ -4,4 +4,4 @@ WIP NES emulator
 
 TODO:
 
-- Get PPU working
+- Uh improve PPU by implementing scrolling

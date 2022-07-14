@@ -64,6 +64,10 @@ pub fn main() {
     // Ugly but it prevents stack overflow...
     let mut cpu = M6502::new(Bus::new(cart.prg_rom, PPU::new(cart.chr_rom, cart.mirroring_type)));
 
+    //let mut ppu = PPU::new(cart.chr_rom, cart.mirroring_type);
+    //let mut bus = Bus::new(cart.prg_rom, ppu);
+    //let mut cpu = M6502::new(bus);
+
     cpu.reset();
     cpu.bus.reset();
     cpu.bus.ppu.reset();

@@ -3,7 +3,7 @@ use crate::traits::IO;
 
 use crate::mirror;
 
-use crate::{test_bit, modify_bit};
+use crate::{test_bit, modify_bit, reverse_byte};
 
 const NAMETABLE_SIZE: usize = 0x400;
 const PALETTE_RAM_SIZE: usize = 0x20;
@@ -86,6 +86,9 @@ pub struct PPU {
     sprite_zero_hit: bool,
     vblank: bool,
 
+    // OAM ADDRESS ($2003)
+    oam_addr: u8,
+
     // PPU SCROLL ($2005)
     scrollx: u8,
     scrolly: u8,
@@ -96,6 +99,7 @@ pub struct PPU {
     // PPU DATA ($2007)
     prev_data: u8, /* AKA IO bus for open bus implementation */
 
+    oam: [u8; OAM_SIZE],
     addr_latch: bool,
 
     scanline: i32,
@@ -138,6 +142,8 @@ impl PPU {
             sprite_zero_hit: false,
             vblank: false,
 
+            oam_addr: 0,
+
             scrollx: 0,
             scrolly: 0,
 
@@ -145,6 +151,7 @@ impl PPU {
 
             prev_data: 0,
 
+            oam: [0; OAM_SIZE],
             addr_latch: false,
 
             scanline: 0,
@@ -179,6 +186,8 @@ impl PPU {
         self.sprite_overflow = false;
         self.sprite_zero_hit = false;
         self.vblank = false;
+
+        self.oam_addr = 0;
 
         self.scrollx = 0;
         self.scrolly = 0;
@@ -237,6 +246,10 @@ impl PPU {
     pub fn render_scanline(&mut self) {
         if self.render_background {
             self.render_bkgd();
+        }
+
+        if self.render_sprites {
+            self.render_foreground();
         }
     }
 
@@ -322,6 +335,80 @@ impl PPU {
         }
     }
 
+    fn render_foreground(&mut self) {
+        for i in (0..OAM_SIZE).step_by(4) {
+            let spr_x = self.oam[i + 3];
+            // Sprite data is delayed by one scanline so to get actual y value, 1 must be added but it will cause superfluous sprites be drawn
+            // Implementing an accurate pixel-by-pixel ppu renderer might solve this problem TODO
+            let spr_y = self.oam[i];
+
+            // For 8x8 sprites, this is the tile number of this sprite within the pattern table selected in bit 3 of PPUCTRL ($2000).
+            // For 8x16 sprites, the PPU ignores the pattern table selection and selects a pattern table from bit 0 of this number.
+            let id = self.oam[i + 1];
+            let attr = self.oam[i + 2];
+
+            let height = if self.sprite_size { 16 } else { 8 };
+
+            // scanline inside sprite?
+            if (self.scanline >= (spr_y as i32)) && (self.scanline < ((spr_y + height) as i32)) {
+                let mut y = (self.scanline as u8) - spr_y; // which row in sprite tile?
+
+                let patt_addr: u16;
+
+                if !self.sprite_size {
+                    patt_addr = if self.sprite_pattern { PT1_START } else { PT0_START } + (id as u16) * 16;
+                } else {
+                    patt_addr = if test_bit!(id, 0) { PT1_START } else { PT0_START } + ((id & 0b11111110) as u16) * 16;
+                };
+
+                let palno = attr & 0b00000011;
+                let priority = test_bit!(attr, 5); // TODO
+
+                if test_bit!(attr, 7) {
+                    y = 8 - y; // vertical flip
+                }
+
+                let palette_start = FRAME_PAL_START + 16 + (palno as u16) * 4;
+                let sys_palette_idx = [self.read_byte(FRAME_PAL_START) as usize,
+                                       self.read_byte(palette_start + 1) as usize,
+                                       self.read_byte(palette_start + 2) as usize,
+                                       self.read_byte(palette_start + 3) as usize];
+
+                let mut lo = self.read_byte(patt_addr + (y as u16));
+                let mut hi = self.read_byte(patt_addr + (y as u16) + 8);
+
+                if test_bit!(attr, 6) {
+                    // horizontal flip
+                    reverse_byte!(lo);
+                    reverse_byte!(hi);
+                }
+
+                for x in 0..8 {
+                    let low = test_bit!(lo, 7 - x) as u16;
+                    let high = test_bit!(hi, 7 - x) as u16;
+                    let colour_idx = ((high << 1) | low) as usize;
+
+                    if colour_idx > 0 {
+                        let rgb = SYSTEM_PALLETE[sys_palette_idx[colour_idx]];
+
+                        let xpos = (spr_x + x) as usize;
+                        let ypos = (spr_y + y) as usize;
+                        let offset = ypos * WIDTH * 3 + xpos * 3;
+
+                        self.pixels[offset    ] = rgb.0;
+                        self.pixels[offset + 1] = rgb.1;
+                        self.pixels[offset + 2] = rgb.2;
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn dma_write_oam(&mut self, data: u8) {
+        self.oam[self.oam_addr as usize] = data;
+        self.oam_addr = self.oam_addr.wrapping_add(1);
+    }
+
     // Learn more about registers' behaviour here https://www.nesdev.org/wiki/PPU_registers
     pub fn read_register(&mut self, register: usize) -> u8 {
         let mut data: u8 = 0;
@@ -335,6 +422,9 @@ impl PPU {
 
                 self.vblank = false;
                 self.addr_latch = false;
+            }
+            0x4 => { // OAM DATA
+                data = self.oam[self.oam_addr as usize];
             }
             0x7 => { // PPU DATA
                 data = self.prev_data; // reads from nametable are delayed by one cycle
@@ -376,6 +466,13 @@ impl PPU {
                 self.enhance_red              = test_bit!(data, 5);
                 self.enhance_green            = test_bit!(data, 6);
                 self.enhance_blue             = test_bit!(data, 7);
+            }
+            0x3 => { // OAM ADDRESS
+                self.oam_addr = data;
+            }
+            0x4 => { // OAM DATA
+                self.oam[self.oam_addr as usize] = data;
+                self.oam_addr = self.oam_addr.wrapping_add(1);
             }
             0x5 => { // PPU SCROLL
                 if !self.addr_latch {

@@ -83,6 +83,16 @@ impl IO for Bus {
             0x0000..=0x1FFF => { self.ram[mirror!(0x0000, addr, RAM_SIZE)] = data; }
             0x2000..=0x3FFF => { self.ppu.write_register(mirror!(0x2000, addr, PPU_REG_COUNT), data); }
             0x4000..=0x401F => {
+                // OAM DMA
+                if addr == 0x4014 {
+                    let oam_start = (data as u16) << 8;
+                    for i in 0..=255 {
+                        let oam_data = self.read_byte(oam_start + i);
+                        self.ppu.dma_write_oam(oam_data);
+                    }
+                    // TODO increase CPU cycles
+                    return;
+                }
                 if addr == 0x4016 {
                     self.joypad.write(data);
                 } else {
