@@ -272,7 +272,10 @@ impl PPU {
 
         let pattstart = if self.bkgd_pattern { PT1_START } else { PT0_START };
 
-        for tx in 0..32 {
+        for screen_x in 0..WIDTH {
+            let tx = (screen_x / 8) as u16; // which tile?
+            let x = (screen_x as u16) % 8; // which column?
+
             let tile_addr = NT_START + ty * 32 + tx;
             let tile_id = self.read_byte(tile_addr);
 
@@ -322,27 +325,22 @@ impl PPU {
                                    self.read_byte(palette_start + 2) as usize,
                                    self.read_byte(palette_start + 3) as usize];
 
-            let mut lo = self.read_byte(pattstart + (tile_id as u16) * 16 + y);
-            let mut hi = self.read_byte(pattstart + (tile_id as u16) * 16 + y + 8);
+            let lo = self.read_byte(pattstart + (tile_id as u16) * 16 + y);
+            let hi = self.read_byte(pattstart + (tile_id as u16) * 16 + y + 8);
 
-            for x in 0..8 {
-                let low = test_bit!(lo, 7) as u16;
-                let high = test_bit!(hi, 7) as u16;
-                let colour_idx = ((high << 1) | low) as usize;
+            let low = test_bit!(lo, 7 - x) as u16;
+            let high = test_bit!(hi, 7 - x) as u16;
+            let colour_idx = ((high << 1) | low) as usize;
 
-                let rgb = SYSTEM_PALLETE[sys_palette_idx[colour_idx]];
+            let rgb = SYSTEM_PALLETE[sys_palette_idx[colour_idx]];
 
-                let xpos = (tx * 8 + x) as usize;
-                let ypos = (ty * 8 + y) as usize;
-                let offset = ypos * WIDTH * 3 + xpos * 3;
+            let xpos = screen_x as usize;
+            let ypos = self.scanline as usize;
+            let offset = ypos * WIDTH * 3 + xpos * 3;
 
-                self.pixels[offset    ] = rgb.0;
-                self.pixels[offset + 1] = rgb.1;
-                self.pixels[offset + 2] = rgb.2;
-
-                lo <<= 1;
-                hi <<= 1;
-            }
+            self.pixels[offset    ] = rgb.0;
+            self.pixels[offset + 1] = rgb.1;
+            self.pixels[offset + 2] = rgb.2;
         }
     }
 
