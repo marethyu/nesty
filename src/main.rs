@@ -58,8 +58,10 @@ pub fn main() {
 
     // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/nes-test-roms-master/cpu_exec_space/test_cpu_exec_space_ppuio.nes
     // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Donkey Kong (World) (Rev A).nes
+    // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Super Mario Bros. (World).nes
+    // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Super_Mario_Forever_Clean_Patch.nes
     // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/nestest.nes
-    let cart = Cartridge::new("C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Donkey Kong (World) (Rev A).nes");
+    let cart = Cartridge::new("C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Super Mario Bros. (World).nes");
 
     // Ugly but it prevents stack overflow...
     let mut cpu = M6502::new(Bus::new(cart.prg_rom, PPU::new(cart.chr_rom, cart.mirroring_type)));

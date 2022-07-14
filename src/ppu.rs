@@ -523,7 +523,16 @@ impl IO for PPU {
                 let nt_addr = mirror!(0x2000, addr, NAMETABLE_SIZE);
                 self.nametable[nt_idx][nt_addr]
             }
-            0x3F00..=0x3FFF => self.palette_ram[mirror!(0x3F00, addr, PALETTE_RAM_SIZE)],
+            0x3F00..=0x3FFF => {
+                let addr = mirror!(0x3F00, addr, PALETTE_RAM_SIZE);
+
+                // Addresses $3F10/$3F14/$3F18/$3F1C are mirrors of $3F00/$3F04/$3F08/$3F0C
+                if addr % 0x04 == 0 {
+                    return self.palette_ram[addr & 0b00001111];
+                } else {
+                    return self.palette_ram[addr];
+                }
+            }
             _ => panic!("Address out of bounds: {:04X}", addr)
         }
     }
@@ -574,7 +583,14 @@ impl IO for PPU {
                 }
             }
             0x3F00..=0x3FFF => {
-                self.palette_ram[mirror!(0x3F00, addr, PALETTE_RAM_SIZE)] = data;
+                let addr = mirror!(0x3F00, addr, PALETTE_RAM_SIZE);
+
+                // Addresses $3F10/$3F14/$3F18/$3F1C are mirrors of $3F00/$3F04/$3F08/$3F0C
+                if addr % 0x04 == 0 {
+                    self.palette_ram[addr & 0b00001111] = data;
+                } else {
+                    self.palette_ram[addr] = data;
+                }
             }
             _ => panic!("Address out of bounds: {:04X}", addr)
         }
