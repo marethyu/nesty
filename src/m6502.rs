@@ -50,10 +50,10 @@ pub struct M6502 {
     sp:     u8,
     pc:     u16,
 
-    log_file: BufWriter<File>,
+    //log_file: BufWriter<File>,
 
     pub bus: Bus,
-    pub total_cycles: u64 // TODO what to do if overflow?
+    pub total_cycles: u64
 }
 
 macro_rules! page_cross {
@@ -71,7 +71,7 @@ impl M6502 {
             p:      0,
             sp:     0,
             pc:     0,
-            log_file: BufWriter::new(File::create("nesty.log").expect("Unable to create file")),
+            //log_file: BufWriter::new(File::create("nesty.log").expect("Unable to create file")),
             bus: bus,
             total_cycles: 0
         }
@@ -115,7 +115,7 @@ impl M6502 {
     }
 
     pub fn tick(&mut self) {
-        self.log_cpu_state();
+        //self.log_cpu_state();
 
         macro_rules! do_add {
             /*  for idiots who have no idea how to determine overflow,
@@ -516,7 +516,7 @@ impl M6502 {
             _ => todo!("Halted at PC={:04X}; Unimplemented opcode: {:02X}", self.pc - 1, opcode)
         }
     }
-
+/*
     fn log_cpu_state(&mut self) {
         let ref opcodes: HashMap<u8, &'static opcodes::OpCode> = *opcodes::OPCODES_MAP;
 
@@ -542,7 +542,7 @@ impl M6502 {
 
         write_string!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}\t\t\t  CYC:{}\n", self.a, self.x, self.y, self.p, self.sp, self.total_cycles);
     }
-
+*/
     fn pull_word(&mut self) -> u16 {
         let lo = self.pull_byte() as u16;
         let hi = self.pull_byte() as u16;
