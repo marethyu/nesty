@@ -82,7 +82,7 @@ pub struct PPU {
 
     // PPU STATUS ($2002)
     unused: bool,
-    sprite_overflow: bool,
+    sprite_overflow: bool, // TODO
     sprite_zero_hit: bool,
     vblank: bool,
 
@@ -210,10 +210,21 @@ impl PPU {
             -1..=239 => { /* Pre render + visible scanline */
                 if self.scanline == -1 && self.cycle == 1 {
                     self.vblank = false; // clear vblank before rendering
+                    self.sprite_zero_hit = false;
                 }
 
                 if self.scanline == 0 && self.cycle == 0 && self.odd_frame {
                     self.cycle += 1; // skip if odd
+                }
+
+                if self.scanline >= 0 && self.cycle == 2 {
+                    // set sprite zero flag if necessary
+                    // TODO it is not accurate but it works for now...
+                    if self.render_sprites {
+                        let x = self.oam[3] as usize;
+                        let y = self.oam[0] as usize;
+                        self.sprite_zero_hit = (self.scanline as usize) == y && x < WIDTH;
+                    }
                 }
 
                 if self.scanline >= 0 && self.cycle == 258 {
