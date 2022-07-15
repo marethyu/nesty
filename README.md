@@ -2,7 +2,9 @@
 
 WIP NES emulator
 
+![mario](mario.gif)
+
 TODO:
 
-- Uh improve PPU by implementing scrolling
+- Continue working on PPU especially y-scrolling
 - Restructure components and implement cartridge and mapper struct
