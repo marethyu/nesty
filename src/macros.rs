@@ -17,6 +17,13 @@ macro_rules! modify_bit {
 }
 
 #[macro_export]
+macro_rules! toggle_bit {
+    ($n:expr, $pos:expr) => {
+        $n ^= (1 << $pos);
+    }
+}
+
+#[macro_export]
 macro_rules! reverse_byte {
     ($n:expr) => {
         $n = ($n & 0b11110000) >> 4 | ($n & 0b00001111) << 4;

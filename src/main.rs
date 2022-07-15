@@ -137,6 +137,8 @@ pub fn main() {
             total += cycles;
         }
 
+        //cpu.bus.ppu.debug_show_nt(0x2400);
+
         texture.update(None, &cpu.bus.ppu.pixels, ppu::WIDTH * 3).unwrap();
         canvas.copy(&texture, None, None).unwrap();
         canvas.present();

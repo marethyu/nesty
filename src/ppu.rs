@@ -3,7 +3,7 @@ use crate::traits::IO;
 
 use crate::mirror;
 
-use crate::{test_bit, modify_bit, reverse_byte};
+use crate::{test_bit, modify_bit, toggle_bit, reverse_byte};
 
 const NAMETABLE_SIZE: usize = 0x400;
 const PALETTE_RAM_SIZE: usize = 0x20;
@@ -106,6 +106,9 @@ pub struct PPU {
     cycle: u32,
     odd_frame: bool,
 
+    // For checking whether pixels in background transparent or not
+    transparent: [bool; WIDTH * HEIGHT],
+
     pub pixels: [u8; WIDTH * HEIGHT * 3],
     pub nmi: bool
 }
@@ -157,6 +160,8 @@ impl PPU {
             scanline: 0,
             cycle: 0,
             odd_frame: false,
+
+            transparent: [false; WIDTH * HEIGHT],
 
             pixels: [0; WIDTH * HEIGHT * 3],
             nmi: false
@@ -211,20 +216,14 @@ impl PPU {
                 if self.scanline == -1 && self.cycle == 1 {
                     self.vblank = false; // clear vblank before rendering
                     self.sprite_zero_hit = false;
+
+                    // ntx and nty might change after scrolling so reset
+                    self.nametable_x = false;
+                    self.nametable_y = false;
                 }
 
                 if self.scanline == 0 && self.cycle == 0 && self.odd_frame {
                     self.cycle += 1; // skip if odd
-                }
-
-                if self.scanline >= 0 && self.cycle == 2 {
-                    // set sprite zero flag if necessary
-                    // TODO it is not accurate but it works for now...
-                    if self.render_sprites {
-                        let x = self.oam[3] as usize;
-                        let y = self.oam[0] as usize;
-                        self.sprite_zero_hit = (self.scanline as usize) == y && x < WIDTH;
-                    }
                 }
 
                 if self.scanline >= 0 && self.cycle == 258 {
@@ -265,7 +264,14 @@ impl PPU {
     }
 
     fn render_bkgd(&mut self) {
-        // Display nametable 0 for now...
+        // supports x scrolling and y scrolling is not supported yet
+
+        let nn = ((self.nametable_y as u16) << 1) | (self.nametable_x as u16);
+
+        let mut base_nt_addr: u16 = NT_START + nn * (NAMETABLE_SIZE as u16);
+        let mut base_attr_addr: u16 = AT_START + nn * (NAMETABLE_SIZE as u16);
+
+        let mut flag = false; // it will be true after base addresses' ntx bit get toggled
 
         let ty = (self.scanline / 8) as u16; // which tile?
         let y = (self.scanline as u16) % 8; // which row?
@@ -273,10 +279,26 @@ impl PPU {
         let pattstart = if self.bkgd_pattern { PT1_START } else { PT0_START };
 
         for screen_x in 0..WIDTH {
-            let tx = (screen_x / 8) as u16; // which tile?
-            let x = (screen_x as u16) % 8; // which column?
+            let mut actual_screen_x = screen_x + (self.scrollx as usize);
 
-            let tile_addr = NT_START + ty * 32 + tx;
+            // Yuh oh... we need to fix base addresses
+            if actual_screen_x >= WIDTH {
+                actual_screen_x -= WIDTH;
+
+                if !flag {
+                    // addresses follows this format: ....NN..........
+                    // toggling bit 10 will change nametable x
+                    toggle_bit!(base_nt_addr, 10);
+                    toggle_bit!(base_attr_addr, 10);
+
+                    flag = true;
+                }
+            }
+
+            let tx = (actual_screen_x / 8) as u16; // which tile?
+            let x = (actual_screen_x as u16) % 8; // which column?
+
+            let tile_addr = base_nt_addr + ty * 32 + tx;
             let tile_id = self.read_byte(tile_addr);
 
             // Format for attribute table byte: BR BL TR TL
@@ -286,7 +308,7 @@ impl PPU {
             //              | BL | BR |
             //              +----+----+
             // Remember that each byte in attribute table corresponds to a 2x2 block (each of the 4 block sections is a group of 2x2 tiles) on nametable
-            let attr_addr = AT_START + (ty / 4) * 8 + (tx / 4);
+            let attr_addr = base_attr_addr + (ty / 4) * 8 + (tx / 4);
             let attr = self.read_byte(attr_addr);
             let tile_palno: u8;
 
@@ -336,6 +358,9 @@ impl PPU {
 
             let xpos = screen_x as usize;
             let ypos = self.scanline as usize;
+
+            self.transparent[ypos * WIDTH + xpos] = colour_idx == 0;
+
             let offset = ypos * WIDTH * 3 + xpos * 3;
 
             self.pixels[offset    ] = rgb.0;
@@ -344,8 +369,91 @@ impl PPU {
         }
     }
 
+    pub fn debug_show_nt(&mut self, nt_start: u16) {
+        let pattstart = if self.bkgd_pattern { PT1_START } else { PT0_START };
+
+        for ty in 0..30 {
+            for tx in 0..32 {
+                let tile_addr = nt_start + ty * 32 + tx;
+                let tile_id = self.read_byte(tile_addr);
+
+                // Format for attribute table byte: BR BL TR TL
+                //              +----+----+
+                //              | TL | TR |
+                //              +----+----+
+                //              | BL | BR |
+                //              +----+----+
+                // Remember that each byte in attribute table corresponds to a 2x2 block (each of the 4 block sections is a group of 2x2 tiles) on nametable
+                let attr_addr = nt_start + 0x03C0 + (ty / 4) * 8 + (tx / 4);
+                let attr = self.read_byte(attr_addr);
+                let tile_palno: u8;
+
+                // Block's row and column (row,col)
+                //    +----+------+
+                //    | 0,0 | 0,1 |
+                //    +-----+-----+
+                //    | 1,0 | 1,1 |
+                //    +-----+-----+
+                // Remember that each block has 4x4 tiles
+                let block_row = (ty % 4) / 2;
+                let block_col = (tx % 4) / 2;
+
+                /* top left */
+                if block_row == 0 && block_col == 0 {
+                    tile_palno =  attr & 0b00000011;
+                }
+                /* top right */
+                else if block_row == 0 && block_col == 1 {
+                    tile_palno = (attr & 0b00001100) >> 2;
+                }
+                /* bottom left */
+                else if block_row == 1 && block_col == 0 {
+                    tile_palno = (attr & 0b00110000) >> 4;
+                }
+                /* bottom right */
+                else {
+                    tile_palno = (attr & 0b11000000) >> 6;
+                }
+
+                // The first colour in frame palette is universal background colour
+                // Note that addresses $3F04/$3F08/$3F0C can contain unique data
+                let palette_start = FRAME_PAL_START + (tile_palno as u16) * 4;
+                let sys_palette_idx = [self.read_byte(FRAME_PAL_START) as usize,
+                                       self.read_byte(palette_start + 1) as usize,
+                                       self.read_byte(palette_start + 2) as usize,
+                                       self.read_byte(palette_start + 3) as usize];
+
+                for y in 0..8 {
+                    let mut lo = self.read_byte(pattstart + (tile_id as u16) * 16 + y);
+                    let mut hi = self.read_byte(pattstart + (tile_id as u16) * 16 + y + 8);
+
+                    for x in 0..8 {
+                        let low = test_bit!(lo, 7) as u16;
+                        let high = test_bit!(hi, 7) as u16;
+                        let colour_idx = ((high << 1) | low) as usize;
+
+                        let rgb = SYSTEM_PALLETE[sys_palette_idx[colour_idx]];
+
+                        let xpos = (tx * 8 + x) as usize;
+                        let ypos = (ty * 8 + y) as usize;
+                        let offset = ypos * WIDTH * 3 + xpos * 3;
+
+                        self.pixels[offset    ] = rgb.0;
+                        self.pixels[offset + 1] = rgb.1;
+                        self.pixels[offset + 2] = rgb.2;
+
+                        lo <<= 1;
+                        hi <<= 1;
+                    }
+                }
+            }
+        }
+    }
+
     fn render_foreground(&mut self) {
-        for i in (0..OAM_SIZE).step_by(4) {
+        // Reversed because sprites with lower OAM indices are drawn in front.
+        // For example, sprite 0 is in front of sprite 1, which is in front of sprite 63.
+        for i in (0..OAM_SIZE).step_by(4).rev() {
             let spr_x = self.oam[i + 3];
             // Sprite data is delayed by one scanline so to get actual y value, 1 must be added but it will cause superfluous sprites be drawn
             // Implementing an accurate pixel-by-pixel ppu renderer might solve this problem TODO
@@ -371,7 +479,6 @@ impl PPU {
                 };
 
                 let palno = attr & 0b00000011;
-                let priority = test_bit!(attr, 5); // TODO
 
                 if test_bit!(attr, 7) {
                     y = 8 - y; // vertical flip
@@ -405,12 +512,27 @@ impl PPU {
                         let rgb = SYSTEM_PALLETE[sys_palette_idx[colour_idx]];
 
                         let xpos = (spr_x + x) as usize;
-                        let ypos = (spr_y + y) as usize;
-                        let offset = ypos * WIDTH * 3 + xpos * 3;
+                        let ypos = self.scanline as usize;
 
-                        self.pixels[offset    ] = rgb.0;
-                        self.pixels[offset + 1] = rgb.1;
-                        self.pixels[offset + 2] = rgb.2;
+                        let offset = ypos * WIDTH * 3 + xpos * 3;
+                        let mut lets_draw = false;
+
+                        if self.transparent[ypos * WIDTH + xpos] {
+                            lets_draw = true;
+                        } else { // else if opaque
+                            if i == 0 {
+                                // This flag is set as soon as an opaque pixel of the sprite at OAM index 0 intersects an opaque background pixel.
+                                self.sprite_zero_hit = true;
+                            }
+
+                            lets_draw = !test_bit!(attr, 5); // only draw if sprites have front priority
+                        }
+
+                        if lets_draw {
+                            self.pixels[offset    ] = rgb.0;
+                            self.pixels[offset + 1] = rgb.1;
+                            self.pixels[offset + 2] = rgb.2;
+                        }
                     }
                 }
             }
