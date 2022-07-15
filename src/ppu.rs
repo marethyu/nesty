@@ -508,31 +508,33 @@ impl PPU {
                     let high = test_bit!(hi, 7 - x) as u16;
                     let colour_idx = ((high << 1) | low) as usize;
 
-                    if colour_idx > 0 {
-                        let rgb = SYSTEM_PALLETE[sys_palette_idx[colour_idx]];
+                    let rgb = SYSTEM_PALLETE[sys_palette_idx[colour_idx]];
 
-                        let xpos = (spr_x + x) as usize;
-                        let ypos = self.scanline as usize;
+                    let xpos = (spr_x + x) as usize;
+                    let ypos = self.scanline as usize;
 
-                        let offset = ypos * WIDTH * 3 + xpos * 3;
-                        let mut lets_draw = false;
+                    let offset = ypos * WIDTH * 3 + xpos * 3;
+                    let mut lets_draw = false;
 
-                        if self.transparent[ypos * WIDTH + xpos] {
-                            lets_draw = true;
-                        } else { // else if opaque
-                            if i == 0 {
-                                // This flag is set as soon as an opaque pixel of the sprite at OAM index 0 intersects an opaque background pixel.
-                                self.sprite_zero_hit = true;
-                            }
+                    // For each pixel in the background buffer, the corresponding sprite pixel replaces it
+                    // only if the sprite pixel is opaque and front priority or if the background pixel is transparent.
+                    if self.transparent[ypos * WIDTH + xpos] {
+                        lets_draw = true;
+                    } else { // else if the background pixel is opaque
+                        let opaque = colour_idx > 0;
 
-                            lets_draw = !test_bit!(attr, 5); // only draw if sprites have front priority
+                        if opaque && i == 0 {
+                            // This flag is set as soon as an opaque pixel of the sprite at OAM index 0 intersects an opaque background pixel.
+                            self.sprite_zero_hit = true;
                         }
 
-                        if lets_draw {
-                            self.pixels[offset    ] = rgb.0;
-                            self.pixels[offset + 1] = rgb.1;
-                            self.pixels[offset + 2] = rgb.2;
-                        }
+                        lets_draw = opaque && !test_bit!(attr, 5); // only draw if sprites have front priority
+                    }
+
+                    if lets_draw {
+                        self.pixels[offset    ] = rgb.0;
+                        self.pixels[offset + 1] = rgb.1;
+                        self.pixels[offset + 2] = rgb.2;
                     }
                 }
             }
