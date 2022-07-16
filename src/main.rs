@@ -6,10 +6,9 @@ mod m6502;
 mod bus;
 mod ppu;
 mod joypad;
+mod emulator;
 mod opcodes;
 
-use std::cell::RefCell;
-use std::sync::Arc;
 use std::process;
 use std::thread;
 use std::time::Duration;
@@ -22,10 +21,8 @@ use sdl2::pixels::PixelFormatEnum;
 #[macro_use(lazy_static)]
 extern crate lazy_static;
 
-use cartridge::Cartridge;
-use bus::Bus;
+use emulator::Emulator;
 
-const CYCLES_PER_FRAME: u64 = 29781; // how many CPU cycles required to render one frame
 const DELAY: u64 = 17; // 1000ms / 59.7fps
 
 pub fn main() {
@@ -55,31 +52,14 @@ pub fn main() {
     key_map.insert(Keycode::A, joypad::BUTTON_A);
     key_map.insert(Keycode::S, joypad::BUTTON_B);
 
-    /* TODO create a emulator struct to enscapulate everything */
-
     // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/nes-test-roms-master/cpu_exec_space/test_cpu_exec_space_ppuio.nes
     // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Donkey Kong (World) (Rev A).nes
     // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Super Mario Bros. (World).nes
     // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Super_Mario_Forever_Clean_Patch.nes
     // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/nestest.nes
-    let cart = Cartridge::new("C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Super Mario Bros. (World).nes");
-    let cart_arc = Arc::new(RefCell::new(cart)); // IMPORTANT refernces must be created inside the main thread otherwise it will be destroyed immediately
-    let weak_cart = &Arc::downgrade(&cart_arc);
+    let mut nes = Emulator::new("C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Super Mario Bros. (World).nes");
 
-    let bus = Arc::new_cyclic(|weak_bus| {
-        RefCell::new(Bus::new(
-            weak_bus,
-            weak_cart
-        ))
-    });
-
-    let cpu = Arc::clone(&bus.borrow().cpu);
-    let ppu = Arc::clone(&bus.borrow().ppu);
-
-    cpu.borrow_mut().reset();
-    ppu.borrow_mut().reset();
-
-    let mut prev_total_cycles = 0;
+    nes.reset();
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
@@ -89,44 +69,21 @@ pub fn main() {
                 Event::Quit { .. } => process::exit(0),
                 Event::KeyDown { keycode, .. } => {
                     if let Some(key) = key_map.get(&keycode.unwrap_or(Keycode::Ampersand)) {
-                        bus.borrow_mut().joypad.press(*key);
+                        nes.joypad().press(*key);
                     }
                 }
                 Event::KeyUp { keycode, .. } => {
                     if let Some(key) = key_map.get(&keycode.unwrap_or(Keycode::Ampersand)) {
-                        bus.borrow_mut().joypad.release(*key);
+                        nes.joypad().release(*key);
                     }
                 }
                 _ => {}
             }
         }
 
-        let mut total: u64 = 0;
+        nes.update();
 
-        while total < CYCLES_PER_FRAME {
-            if ppu.borrow().nmi {
-                cpu.borrow_mut().nmi();
-                ppu.borrow_mut().nmi = false;
-            }
-
-            // TODO IRQ here
-
-            cpu.borrow_mut().tick();
-
-            let total_cycles = cpu.borrow().total_cycles;
-            let cycles = total_cycles - prev_total_cycles;
-            prev_total_cycles = total_cycles;
-
-            for _i in 0..cycles {
-                ppu.borrow_mut().tick();
-                ppu.borrow_mut().tick();
-                ppu.borrow_mut().tick();
-            }
-
-            total += cycles;
-        }
-
-        texture.update(None, &ppu.borrow().pixels, ppu::WIDTH * 3).unwrap();
+        texture.update(None, &nes.ppu().pixels, ppu::WIDTH * 3).unwrap();
         canvas.copy(&texture, None, None).unwrap();
         canvas.present();
 

@@ -119,7 +119,7 @@ pub struct PPU {
 impl PPU {
     pub fn new(cart: Weak<RefCell<Cartridge>>) -> Self {
         PPU {
-            cart: cart,
+            cart: cart.clone(),
 
             nametable: vec![vec![0; NAMETABLE_SIZE]; 4],
             palette_ram: vec![0; PALETTE_RAM_SIZE],

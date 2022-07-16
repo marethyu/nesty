@@ -1,8 +1,6 @@
 use std::cell::RefCell;
-use std::cell::RefMut;
 use std::sync::{Arc, Weak};
 
-use crate::m6502::M6502;
 use crate::ppu::PPU;
 use crate::cartridge::Cartridge;
 use crate::joypad::Joypad;
@@ -25,42 +23,38 @@ CPU Memory Map (16bit buswidth, 0-FFFFh)
   8000h-FFFFh   Cartridge PRG-ROM Area 32K
 */
 pub struct Bus {
-    pub cpu: Arc<RefCell<M6502>>, /* requires access to bus */
-    pub ppu: Arc<RefCell<PPU>>, /* requires access to cartridge */
-
-    pub joypad: Joypad,
-
-    /* also shared by ppu since both bus and ppu need cartridge access. the real cartridge is created in main thread */
     cart: Weak<RefCell<Cartridge>>,
+    ppu: Weak<RefCell<PPU>>,
+    joypad: Weak<RefCell<Joypad>>,
+
     ram: [u8; RAM_SIZE],
     io_regs: [u8; IO_REGS_COUNT]
 }
 
 impl Bus {
-    pub fn new(weak_bus: &Weak<RefCell<Bus>>,
-               weak_cart: &Weak<RefCell<Cartridge>>) -> Self {
+    pub fn new(weak_cart: Weak<RefCell<Cartridge>>,
+               weak_ppu: Weak<RefCell<PPU>>,
+               weak_joypad: Weak<RefCell<Joypad>>) -> Self {
         Bus {
-            cpu: Arc::new(RefCell::new(M6502::new(weak_bus.clone()))),
-            ppu: Arc::new(RefCell::new(PPU::new(weak_cart.clone()))),
-
-            joypad: Joypad::new(),
-
             cart: weak_cart.clone(),
+            ppu: weak_ppu.clone(),
+            joypad: weak_joypad.clone(),
+
             ram: [0; RAM_SIZE],
             io_regs: [0; IO_REGS_COUNT]
         }
     }
 
-    pub fn cpu(&self) -> RefMut<'_, M6502> {
-        self.cpu.borrow_mut()
-    }
-
-    pub fn ppu(&self) -> RefMut<'_, PPU> {
-        self.ppu.borrow_mut()
-    }
-
     pub fn cart(&self) -> Arc<RefCell<Cartridge>> {
         self.cart.upgrade().expect("Cartridge lost for bus")
+    }
+
+    pub fn ppu(&self) -> Arc<RefCell<PPU>> {
+        self.ppu.upgrade().expect("PPU lost for bus")
+    }
+
+    pub fn joypad(&self) -> Arc<RefCell<Joypad>> {
+        self.joypad.upgrade().expect("Joypad lost for bus")
     }
 }
 
@@ -68,10 +62,10 @@ impl IO for Bus {
     fn read_byte(&mut self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x1FFF => self.ram[mirror!(0x0000, addr, RAM_SIZE)],
-            0x2000..=0x3FFF => self.ppu().read_register(mirror!(0x2000, addr, PPU_REG_COUNT)),
+            0x2000..=0x3FFF => self.ppu().borrow_mut().read_register(mirror!(0x2000, addr, PPU_REG_COUNT)),
             0x4000..=0x401F => {
                 if addr == 0x4016 {
-                    return self.joypad.read()
+                    return self.joypad().borrow_mut().read()
                 }
                 return self.io_regs[(addr - 0x4000) as usize]
             },
@@ -89,20 +83,20 @@ impl IO for Bus {
     fn write_byte(&mut self, addr: u16, data: u8) {
         match addr {
             0x0000..=0x1FFF => { self.ram[mirror!(0x0000, addr, RAM_SIZE)] = data; }
-            0x2000..=0x3FFF => { self.ppu().write_register(mirror!(0x2000, addr, PPU_REG_COUNT), data); }
+            0x2000..=0x3FFF => { self.ppu().borrow_mut().write_register(mirror!(0x2000, addr, PPU_REG_COUNT), data); }
             0x4000..=0x401F => {
                 // OAM DMA
                 if addr == 0x4014 {
                     let oam_start = (data as u16) << 8;
                     for i in 0..=255 {
                         let oam_data = self.read_byte(oam_start + i);
-                        self.ppu().dma_write_oam(oam_data);
+                        self.ppu().borrow_mut().dma_write_oam(oam_data);
                     }
                     // TODO increase CPU cycles
                     return;
                 }
                 if addr == 0x4016 {
-                    self.joypad.write(data);
+                    self.joypad().borrow_mut().write(data);
                 } else {
                     self.io_regs[(addr - 0x4000) as usize] = data;
                 }

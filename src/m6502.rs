@@ -73,7 +73,7 @@ impl M6502 {
             p:   0,
             sp:  0,
             pc:  0,
-            bus: bus,
+            bus: bus.clone(),
             //log_file: BufWriter::new(File::create("nesty.log").expect("Unable to create file")),
             total_cycles: 0
         }
