@@ -28,10 +28,10 @@ pub struct Bus {
     pub cpu: Arc<RefCell<M6502>>, /* requires access to bus */
     pub ppu: Arc<RefCell<PPU>>, /* requires access to cartridge */
 
-    /* also shared by ppu since both bus and ppu need cartridge access. the real cartridge is created in main thread */
-    pub cart: Weak<RefCell<Cartridge>>,
     pub joypad: Joypad,
 
+    /* also shared by ppu since both bus and ppu need cartridge access. the real cartridge is created in main thread */
+    cart: Weak<RefCell<Cartridge>>,
     ram: [u8; RAM_SIZE],
     io_regs: [u8; IO_REGS_COUNT]
 }
@@ -43,9 +43,9 @@ impl Bus {
             cpu: Arc::new(RefCell::new(M6502::new(weak_bus.clone()))),
             ppu: Arc::new(RefCell::new(PPU::new(weak_cart.clone()))),
 
-            cart: weak_cart.clone(),
             joypad: Joypad::new(),
 
+            cart: weak_cart.clone(),
             ram: [0; RAM_SIZE],
             io_regs: [0; IO_REGS_COUNT]
         }
