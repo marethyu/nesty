@@ -1,5 +1,9 @@
-use crate::cartridge::Mirroring;
-use crate::traits::IO;
+use std::cell::RefCell;
+use std::sync::{Arc, Weak};
+
+use crate::cartridge::Cartridge;
+use crate::mapper::Mirroring;
+use crate::io::IO;
 
 use crate::mirror;
 
@@ -49,8 +53,7 @@ PPU Memory Map (14bit buswidth, 0-3FFFh)
   3F20h-3FFFh   Mirrors of 3F00h-3F1Fh
 */
 pub struct PPU {
-    cart_chr_rom: Vec<u8>, /* contains pattern table */
-    mirroring_type: Mirroring,
+    cart: Weak<RefCell<Cartridge>>, /* for accessing pattern table */
 
     // Nametable is represented by array of 4 0x400 byte values
     // Index 0 is nametable 0 ($2000-$23FF)
@@ -114,10 +117,9 @@ pub struct PPU {
 }
 
 impl PPU {
-    pub fn new(chr_rom: Vec<u8>, mirroring_type: Mirroring) -> Self {
+    pub fn new(cart: Weak<RefCell<Cartridge>>) -> Self {
         PPU {
-            cart_chr_rom: chr_rom,
-            mirroring_type: mirroring_type,
+            cart: cart,
 
             nametable: vec![vec![0; NAMETABLE_SIZE]; 4],
             palette_ram: vec![0; PALETTE_RAM_SIZE],
@@ -166,6 +168,10 @@ impl PPU {
             pixels: [0; WIDTH * HEIGHT * 3],
             nmi: false
         }
+    }
+
+    fn cart(&self) -> Arc<RefCell<Cartridge>> {
+        self.cart.upgrade().expect("Cartridge lost for ppu")
     }
 
     pub fn reset(&mut self) {
@@ -654,7 +660,7 @@ impl PPU {
 impl IO for PPU {
     fn read_byte(&mut self, addr: u16) -> u8 {
         match addr {
-            0x0000..=0x1FFF => self.cart_chr_rom[addr as usize],
+            0x0000..=0x1FFF => self.cart().borrow_mut().read_byte(addr),
             0x2000..=0x3EFF => {
                 let nt_idx = mirror!(0x2000, addr, NAMETABLE_SIZE * 4) / NAMETABLE_SIZE;
                 let nt_addr = mirror!(0x2000, addr, NAMETABLE_SIZE);
@@ -686,7 +692,7 @@ impl IO for PPU {
                 let a = mirror!(0x2000, addr, NAMETABLE_SIZE * 4);
                 let nt_addr = mirror!(0x2000, addr, NAMETABLE_SIZE);
 
-                match self.mirroring_type {
+                match self.cart().borrow().mirroring() {
                     /* $2000 equals $2800 and $2400 equals $2C00
                             +---+---+
                             | A | B |

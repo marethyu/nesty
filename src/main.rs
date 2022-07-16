@@ -1,5 +1,6 @@
 mod macros;
-mod traits;
+mod mapper;
+mod io;
 mod cartridge;
 mod m6502;
 mod bus;
@@ -7,6 +8,8 @@ mod ppu;
 mod joypad;
 mod opcodes;
 
+use std::cell::RefCell;
+use std::sync::Arc;
 use std::process;
 use std::thread;
 use std::time::Duration;
@@ -21,10 +24,6 @@ extern crate lazy_static;
 
 use cartridge::Cartridge;
 use bus::Bus;
-use ppu::PPU;
-use m6502::M6502;
-
-use crate::traits::IO;
 
 const CYCLES_PER_FRAME: u64 = 29781; // how many CPU cycles required to render one frame
 const DELAY: u64 = 17; // 1000ms / 59.7fps
@@ -56,28 +55,33 @@ pub fn main() {
     key_map.insert(Keycode::A, joypad::BUTTON_A);
     key_map.insert(Keycode::S, joypad::BUTTON_B);
 
+    /* TODO create a emulator struct to enscapulate everything */
+
     // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/nes-test-roms-master/cpu_exec_space/test_cpu_exec_space_ppuio.nes
     // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Donkey Kong (World) (Rev A).nes
     // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Super Mario Bros. (World).nes
     // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Super_Mario_Forever_Clean_Patch.nes
     // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/nestest.nes
     let cart = Cartridge::new("C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Super Mario Bros. (World).nes");
+    let cart_arc = Arc::new(RefCell::new(cart)); // IMPORTANT refernces must be created inside the main thread otherwise it will be destroyed immediately
+    let weak_cart = &Arc::downgrade(&cart_arc);
 
-    // Ugly but it prevents stack overflow...
-    let mut cpu = M6502::new(Bus::new(cart.prg_rom, PPU::new(cart.chr_rom, cart.mirroring_type)));
+    let bus = Arc::new_cyclic(|weak_bus| {
+        RefCell::new(Bus::new(
+            weak_bus,
+            weak_cart
+        ))
+    });
 
-    //let mut ppu = PPU::new(cart.chr_rom, cart.mirroring_type);
-    //let mut bus = Bus::new(cart.prg_rom, ppu);
-    //let mut cpu = M6502::new(bus);
+    let cpu = Arc::clone(&bus.borrow().cpu);
+    let ppu = Arc::clone(&bus.borrow().ppu);
 
-    cpu.reset();
-    cpu.bus.reset();
-    cpu.bus.ppu.reset();
+    cpu.borrow_mut().reset();
+    ppu.borrow_mut().reset();
+
+    let mut prev_total_cycles = 0;
 
     let mut event_pump = sdl_context.event_pump().unwrap();
-
-    let mut cycles: u64;
-    let mut prev: u64 = 0;
 
     loop {
         for event in event_pump.poll_iter() {
@@ -85,12 +89,12 @@ pub fn main() {
                 Event::Quit { .. } => process::exit(0),
                 Event::KeyDown { keycode, .. } => {
                     if let Some(key) = key_map.get(&keycode.unwrap_or(Keycode::Ampersand)) {
-                        cpu.bus.joypad.press(*key);
+                        bus.borrow_mut().joypad.press(*key);
                     }
                 }
                 Event::KeyUp { keycode, .. } => {
                     if let Some(key) = key_map.get(&keycode.unwrap_or(Keycode::Ampersand)) {
-                        cpu.bus.joypad.release(*key);
+                        bus.borrow_mut().joypad.release(*key);
                     }
                 }
                 _ => {}
@@ -100,46 +104,29 @@ pub fn main() {
         let mut total: u64 = 0;
 
         while total < CYCLES_PER_FRAME {
-            if cpu.bus.ppu.nmi {
-                cpu.nmi();
-                cpu.bus.ppu.nmi = false;
+            if ppu.borrow().nmi {
+                cpu.borrow_mut().nmi();
+                ppu.borrow_mut().nmi = false;
             }
 
-            // Check for more interrupts here...
+            // TODO IRQ here
 
-            cpu.tick();
+            cpu.borrow_mut().tick();
 
-            cycles = cpu.total_cycles - prev;
-            prev = cpu.total_cycles;
+            let total_cycles = cpu.borrow().total_cycles;
+            let cycles = total_cycles - prev_total_cycles;
+            prev_total_cycles = total_cycles;
 
             for _i in 0..cycles {
-                cpu.bus.tick();
+                ppu.borrow_mut().tick();
+                ppu.borrow_mut().tick();
+                ppu.borrow_mut().tick();
             }
 
-            /* Serial output */
-/*
-            if cpu.bus.read_byte(0x6001) == 0xDE /*&&
-               cpu.bus.read_byte(0x6002) == 0xB0 &&
-               cpu.bus.read_byte(0x6003) == 0xF1*/ { /* idk what is G1 */
-                let status = cpu.bus.read_byte(0x6000);
-                let mut addr = 0x6004;
-
-                if status < 0x80 {
-                    println!("Result: {}\n", status);
-
-                    while cpu.bus.read_byte(addr) > 0 {
-                        print!("{}", cpu.bus.read_byte(addr) as char);
-                        addr += 1;
-                    }
-                }
-            }
-*/
             total += cycles;
         }
 
-        //cpu.bus.ppu.debug_show_nt(0x2400);
-
-        texture.update(None, &cpu.bus.ppu.pixels, ppu::WIDTH * 3).unwrap();
+        texture.update(None, &ppu.borrow().pixels, ppu::WIDTH * 3).unwrap();
         canvas.copy(&texture, None, None).unwrap();
         canvas.present();
 

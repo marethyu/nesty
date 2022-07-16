@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+use std::sync::{Arc, Weak};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufWriter, Write};
@@ -5,7 +7,7 @@ use std::io::{BufWriter, Write};
 use crate::bus::Bus;
 use crate::opcodes;
 
-use crate::traits::IO;
+use crate::io::IO;
 
 use crate::{test_bit, modify_bit};
 
@@ -43,16 +45,16 @@ pub enum AddressingMode {
 }
 
 pub struct M6502 {
-    a:      u8,
-    x:      u8,
-    y:      u8,
-    p:      u8,
-    sp:     u8,
-    pc:     u16,
+    a:   u8,
+    x:   u8,
+    y:   u8,
+    p:   u8,
+    sp:  u8,
+    pc:  u16,
 
+    bus: Weak<RefCell<Bus>>,
     //log_file: BufWriter<File>,
 
-    pub bus: Bus,
     pub total_cycles: u64
 }
 
@@ -63,18 +65,22 @@ macro_rules! page_cross {
 }
 
 impl M6502 {
-    pub fn new(bus: Bus) -> Self {
+    pub fn new(bus: Weak<RefCell<Bus>>) -> Self {
         M6502 {
-            a:      0,
-            x:      0,
-            y:      0,
-            p:      0,
-            sp:     0,
-            pc:     0,
-            //log_file: BufWriter::new(File::create("nesty.log").expect("Unable to create file")),
+            a:   0,
+            x:   0,
+            y:   0,
+            p:   0,
+            sp:  0,
+            pc:  0,
             bus: bus,
+            //log_file: BufWriter::new(File::create("nesty.log").expect("Unable to create file")),
             total_cycles: 0
         }
+    }
+
+    fn bus(&self) -> Arc<RefCell<Bus>> {
+        self.bus.upgrade().expect("Bus lost for cpu")
     }
 
     // Call when you power on the device
@@ -526,14 +532,14 @@ impl M6502 {
             }
         }
 
-        let code = self.bus.read_byte(self.pc);
+        let code = self.bus().borrow_mut().read_byte(self.pc);
         let opcode = opcodes
             .get(&code)
             .expect(&format!("OpCode {:02X} is not recognized", code));
         write_string!("{:04X}  ", self.pc);
 
         for i in 0..opcode.len {
-            write_string!("{:02X} ", self.bus.read_byte(self.pc + (i as u16)));
+            write_string!("{:02X} ", self.bus().borrow_mut().read_byte(self.pc + (i as u16)));
         }
         for i in 0..(3-opcode.len) {
             write_string!("   ");
@@ -674,22 +680,22 @@ impl M6502 {
     }
 
     fn cpu_write_word(&mut self, addr: u16, data: u16) {
-        self.bus.write_word(addr, data);
+        self.bus().borrow_mut().write_word(addr, data);
         self.total_cycles += 2;
     }
 
     fn cpu_write_byte(&mut self, addr: u16, data: u8) {
-        self.bus.write_byte(addr, data);
+        self.bus().borrow_mut().write_byte(addr, data);
         self.total_cycles += 1;
     }
 
     fn cpu_read_word(&mut self, addr: u16) -> u16 {
         self.total_cycles += 2;
-        self.bus.read_word(addr)
+        self.bus().borrow_mut().read_word(addr)
     }
 
     fn cpu_read_byte(&mut self, addr: u16) -> u8 {
         self.total_cycles += 1;
-        self.bus.read_byte(addr)
+        self.bus().borrow_mut().read_byte(addr)
     }
 }
