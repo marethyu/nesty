@@ -5,9 +5,7 @@ use crate::cartridge::Cartridge;
 use crate::mapper::Mirroring;
 use crate::io::IO;
 
-use crate::mirror;
-
-use crate::{test_bit, modify_bit, toggle_bit, reverse_byte};
+use crate::{test_bit, modify_bit, toggle_bit, reverse_byte, mirror};
 
 const NAMETABLE_SIZE: usize = 0x400;
 const PALETTE_RAM_SIZE: usize = 0x20;
