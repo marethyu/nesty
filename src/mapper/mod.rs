@@ -1,7 +1,10 @@
 pub mod mapper0;
+pub mod mapper1;
 
 pub const PRG_ROM_BANK_SIZE: usize = 0x4000;
 pub const CHR_ROM_BANK_SIZE: usize = 0x2000;
+
+const SRAM_SIZE: usize = 0x2000;
 
 #[derive(Copy, Clone)]
 pub enum Mirroring {

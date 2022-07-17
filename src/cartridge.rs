@@ -4,18 +4,17 @@ use crate::io::IO;
 use crate::mapper::{Mirroring, Mapper, PRG_ROM_BANK_SIZE, CHR_ROM_BANK_SIZE};
 
 use crate::mapper::mapper0::Mapper0;
+use crate::mapper::mapper1::Mapper1;
 
 use crate::test_bit;
 
 const INES_IDENT: [u8; 4] = [0x4E, 0x45, 0x53, 0x1A];
 
 const EXPANSION_AREA_SIZE: usize = 0x1FE0;
-const SRAM_SIZE: usize = 0x2000;
 
 pub struct Cartridge {
     mapper: Box<dyn Mapper>,
-    expansion_area: Vec<u8>,
-    sram: Vec<u8>
+    expansion_area: Vec<u8>
 }
 
 impl Cartridge {
@@ -40,7 +39,11 @@ impl Cartridge {
         let chr_rom_banks = rom[5] as usize;
 
         let prg_rom_size = prg_rom_banks * PRG_ROM_BANK_SIZE;
-        let chr_rom_size = chr_rom_banks * CHR_ROM_BANK_SIZE;
+        let chr_rom_size = if chr_rom_banks == 0 {
+            CHR_ROM_BANK_SIZE /* the board uses CHR RAM */
+        } else {
+            chr_rom_banks * CHR_ROM_BANK_SIZE
+        };
 
         let trainer_exists = test_bit!(rom[6], 2);
 
@@ -48,18 +51,22 @@ impl Cartridge {
         let chr_rom_start = prg_rom_start + prg_rom_size;
 
         let prg_rom = rom[prg_rom_start..(prg_rom_start + prg_rom_size)].to_vec();
-        let chr_rom = rom[chr_rom_start..(chr_rom_start + chr_rom_size)].to_vec();
+        let chr_rom = if chr_rom_banks == 0 {
+            vec![0; chr_rom_size]
+        } else {
+            rom[chr_rom_start..(chr_rom_start + chr_rom_size)].to_vec()
+        };
 
         let mapper_type = (rom[6] >> 4) | (rom[7] & 0b11110000);
-        let mapper = match mapper_type {
+        let mapper: Box<dyn Mapper> = match mapper_type {
             0 => Box::new(Mapper0::new(mirroring_type, prg_rom_size, prg_rom, chr_rom)),
+            1 => Box::new(Mapper1::new(mirroring_type, prg_rom_banks, chr_rom_banks, prg_rom, chr_rom)),
             _ => panic!("Unknown mapper: {}", mapper_type)
         };
 
         Cartridge {
             mapper: mapper,
-            expansion_area: vec![0; EXPANSION_AREA_SIZE],
-            sram: vec![0; SRAM_SIZE]
+            expansion_area: vec![0; EXPANSION_AREA_SIZE]
         }
     }
 
@@ -76,8 +83,7 @@ impl IO for Cartridge {
 
             /* Accessed by CPU */
             0x4020..=0x5FFF => self.expansion_area[(addr - 0x4020) as usize],
-            0x6000..=0x7FFF => self.sram[(addr - 0x6000) as usize],
-            0x8000..=0xFFFF => self.mapper.cpu_read_byte(addr),
+            0x6000..=0xFFFF => self.mapper.cpu_read_byte(addr),
             _ => panic!("Address out of bounds: {:04X}", addr)
         }
     }
@@ -99,10 +105,7 @@ impl IO for Cartridge {
             0x4020..=0x5FFF => {
                 self.expansion_area[(addr - 0x4020) as usize] = data;
             }
-            0x6000..=0x7FFF => {
-                self.sram[(addr - 0x6000) as usize] = data;
-            }
-            0x8000..=0xFFFF => {
+            0x6000..=0xFFFF => {
                 self.mapper.cpu_write_byte(addr, data);
             }
             _ => panic!("Address out of bounds: {:04X}", addr)
