@@ -484,9 +484,15 @@ impl PPU {
         // For example, sprite 0 is in front of sprite 1, which is in front of sprite 63.
         for i in (0..OAM_SIZE).step_by(4).rev() {
             let spr_x = self.oam[i + 3];
-            // Sprite data is delayed by one scanline so to get actual y value, 1 must be added but it will cause superfluous sprites be drawn
-            // Implementing an accurate pixel-by-pixel ppu renderer might solve this problem TODO
-            let spr_y = self.oam[i];
+            let mut spr_y = self.oam[i];
+
+            // Sprites are hidden if its raw y equals to $EF-$FF
+            if spr_y >= 0xEF {
+                continue;
+            }
+
+            // Sprite data is delayed by one scanline so to get actual y value, 1 must be added
+            spr_y = spr_y.wrapping_add(1);
 
             // For 8x8 sprites, this is the tile number of this sprite within the pattern table selected in bit 3 of PPUCTRL ($2000).
             // For 8x16 sprites, the PPU ignores the pattern table selection and selects a pattern table from bit 0 of this number.
@@ -543,7 +549,7 @@ impl PPU {
                     let ypos = self.scanline as usize;
 
                     let offset = ypos * WIDTH * 3 + xpos * 3;
-                    let mut lets_draw = false;
+                    let lets_draw;
 
                     // For each pixel in the background buffer, the corresponding sprite pixel replaces it
                     // only if the sprite pixel is opaque and front priority or if the background pixel is transparent.
@@ -552,7 +558,7 @@ impl PPU {
                     } else { // else if the background pixel is opaque
                         let opaque = colour_idx > 0;
 
-                        if opaque && i == 0 {
+                        if opaque && i == 0 && !self.sprite_zero_hit {
                             // This flag is set as soon as an opaque pixel of the sprite at OAM index 0 intersects an opaque background pixel.
                             self.sprite_zero_hit = true;
                         }
