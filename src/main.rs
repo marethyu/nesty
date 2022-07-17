@@ -41,7 +41,11 @@ pub fn main() {
         .build()
         .unwrap();
 
-    let mut canvas = window.into_canvas().build().unwrap();
+    let mut canvas = window.into_canvas()
+        .accelerated()
+        .present_vsync()
+        .build()
+        .unwrap();
     let texture_creator = canvas.texture_creator();
 
     let mut texture = texture_creator
@@ -82,6 +86,7 @@ pub fn main() {
         nes.update();
 
         texture.update(None, &nes.ppu().pixels, ppu::WIDTH * 3).unwrap();
+        canvas.clear();
         canvas.copy(&texture, None, None).unwrap();
         canvas.present();
 
