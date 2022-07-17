@@ -223,9 +223,10 @@ impl PPU {
                     self.vblank = false; // clear vblank before rendering
                     self.sprite_zero_hit = false;
 
-                    // ntx and nty might change after scrolling so reset
+                    // ntx might change after scrolling so reset
                     self.nametable_x = false;
-                    self.nametable_y = false;
+                    // TODO is resetting nty also necessary?!?
+                    // self.nametable_y = false;
                 }
 
                 if self.scanline == 0 && self.cycle == 0 && self.odd_frame {
@@ -270,17 +271,27 @@ impl PPU {
     }
 
     fn render_bkgd(&mut self) {
-        // supports x scrolling and y scrolling is not supported yet
-
         let nn = ((self.nametable_y as u16) << 1) | (self.nametable_x as u16);
 
         let mut base_nt_addr: u16 = NT_START + nn * (NAMETABLE_SIZE as u16);
         let mut base_attr_addr: u16 = AT_START + nn * (NAMETABLE_SIZE as u16);
 
-        let mut flag = false; // it will be true after base addresses' ntx bit get toggled
+        let mut scx_flag = false; // it will be true after base addresses' ntx bit get toggled
 
-        let ty = (self.scanline / 8) as u16; // which tile?
-        let y = (self.scanline as u16) % 8; // which row?
+        let mut actual_screen_y = (self.scanline as usize) + (self.scrolly as usize);
+
+        // Yuh oh... we need to fix base addresses
+        if actual_screen_y >= HEIGHT {
+            actual_screen_y -= HEIGHT;
+
+            // addresses follows this format: ....NN..........
+            // toggling bit 11 will change nametable y
+            toggle_bit!(base_nt_addr, 11);
+            toggle_bit!(base_attr_addr, 11);
+        }
+
+        let ty = (actual_screen_y as u16) / 8; // which tile?
+        let y = (actual_screen_y as u16) % 8; // which row?
 
         let pattstart = if self.bkgd_pattern { PT1_START } else { PT0_START };
 
@@ -291,13 +302,13 @@ impl PPU {
             if actual_screen_x >= WIDTH {
                 actual_screen_x -= WIDTH;
 
-                if !flag {
+                if !scx_flag {
                     // addresses follows this format: ....NN..........
                     // toggling bit 10 will change nametable x
                     toggle_bit!(base_nt_addr, 10);
                     toggle_bit!(base_attr_addr, 10);
 
-                    flag = true;
+                    scx_flag = true;
                 }
             }
 
