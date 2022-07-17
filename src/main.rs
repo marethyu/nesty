@@ -17,6 +17,9 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
 
+#[macro_use(bitfield)]
+extern crate proc_bitfield;
+
 use emulator::Emulator;
 
 const DELAY: u64 = 17; // 1000ms / 59.7fps

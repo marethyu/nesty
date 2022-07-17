@@ -51,6 +51,49 @@ pub static SYSTEM_PALLETE: [(u8,u8,u8); 64] = [
     (0x99, 0xFF, 0xFC), (0xDD, 0xDD, 0xDD), (0x11, 0x11, 0x11), (0x11, 0x11, 0x11)
 ];
 
+bitfield! {
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    pub struct ControlRegister(pub u8): Debug {
+        pub raw: u8 @ ..,
+
+        pub nametable_x: bool @ 0,
+        pub nametable_y: bool @ 1,
+        pub vram_increment_downwards: bool @ 2,
+        pub sprite_pattern: bool @ 3,
+        pub bkgd_pattern: bool @ 4,
+        pub sprite_size: bool @ 5,
+        pub ms_select: bool @ 6,
+        pub nmi_enable: bool @ 7
+    }
+}
+
+bitfield! {
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    pub struct MaskRegister(pub u8): Debug {
+        pub raw: u8 @ ..,
+
+        pub grayscale: bool @ 0,
+        pub render_background_left: bool @ 1,
+        pub render_sprites_left: bool @ 2,
+        pub render_background: bool @ 3,
+        pub render_sprites: bool @ 4,
+        pub enhance_red: bool @ 5,
+        pub enhance_green: bool @ 6,
+        pub enhance_blue: bool @ 7
+    }
+}
+
+bitfield! {
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    pub struct StatusRegister(pub u8): Debug {
+        pub raw: u8 @ ..,
+
+        pub sprite_overflow: bool @ 5,
+        pub sprite_zero_hit: bool @ 6,
+        pub vblank: bool @ 7
+    }
+}
+
 /*
 PPU Memory Map (14bit buswidth, 0-3FFFh)
   0000h-0FFFh   Pattern Table 0 (4K) (256 Tiles)
@@ -76,30 +119,13 @@ pub struct PPU {
     palette_ram: Vec<u8>,
 
     // PPU CONTROL ($2000)
-    nametable_x: bool,
-    nametable_y: bool,
-    vram_increment_downwards: bool,
-    sprite_pattern: bool,
-    bkgd_pattern: bool,
-    sprite_size: bool,
-    ms_select: bool,
-    nmi_enable: bool,
+    control: ControlRegister,
 
     // PPU MASK ($2001)
-    grayscale: bool,
-    render_background_left: bool,
-    render_sprites_left: bool,
-    render_background: bool,
-    render_sprites: bool,
-    enhance_red: bool,
-    enhance_green: bool,
-    enhance_blue: bool,
+    mask: MaskRegister,
 
     // PPU STATUS ($2002)
-    unused: bool,
-    sprite_overflow: bool, // TODO
-    sprite_zero_hit: bool,
-    vblank: bool,
+    status: StatusRegister,
 
     // OAM ADDRESS ($2003)
     oam_addr: u8,
@@ -136,28 +162,9 @@ impl PPU {
             nametable: vec![vec![0; NAMETABLE_SIZE]; 4],
             palette_ram: vec![0; PALETTE_RAM_SIZE],
 
-            nametable_x: false,
-            nametable_y: false,
-            vram_increment_downwards: false,
-            sprite_pattern: false,
-            bkgd_pattern: false,
-            sprite_size: false,
-            ms_select: false,
-            nmi_enable: false,
-
-            grayscale: false,
-            render_background_left: false,
-            render_sprites_left: false,
-            render_background: false,
-            render_sprites: false,
-            enhance_red: false,
-            enhance_green: false,
-            enhance_blue: false,
-
-            unused: false,
-            sprite_overflow: false,
-            sprite_zero_hit: false,
-            vblank: false,
+            control: ControlRegister(0),
+            mask: MaskRegister(0),
+            status: StatusRegister(0),
 
             oam_addr: 0,
 
@@ -187,28 +194,9 @@ impl PPU {
     }
 
     pub fn reset(&mut self) {
-        self.nametable_x = false;
-        self.nametable_y = false;
-        self.vram_increment_downwards = false;
-        self.sprite_pattern = false;
-        self.bkgd_pattern = false;
-        self.sprite_size = false;
-        self.ms_select = false;
-        self.nmi_enable = false;
-
-        self.grayscale = false;
-        self.render_background_left = false;
-        self.render_sprites_left = false;
-        self.render_background = false;
-        self.render_sprites = false;
-        self.enhance_red = false;
-        self.enhance_green = false;
-        self.enhance_blue = false;
-
-        self.unused = false;
-        self.sprite_overflow = false;
-        self.sprite_zero_hit = false;
-        self.vblank = false;
+        self.control.set_raw(0);
+        self.mask.set_raw(0);
+        self.status.set_raw(0);
 
         self.oam_addr = 0;
 
@@ -232,11 +220,11 @@ impl PPU {
         match self.scanline {
             -1..=239 => { /* Pre render + visible scanline */
                 if self.scanline == -1 && self.cycle == 1 {
-                    self.vblank = false; // clear vblank before rendering
-                    self.sprite_zero_hit = false;
+                    self.status.set_vblank(false); // clear vblank before rendering
+                    self.status.set_sprite_zero_hit(false);
 
                     // ntx might change after scrolling so reset
-                    self.nametable_x = false;
+                    self.control.set_nametable_x(false);
                     // TODO is resetting nty also necessary?!?
                     // self.nametable_y = false;
                 }
@@ -253,8 +241,8 @@ impl PPU {
             }
             241 => {      /* Start of VBlank scanline */
                 if self.cycle == 1 {
-                    self.vblank = true;
-                    self.nmi = self.nmi_enable; // set nmi if it's enabled
+                    self.status.set_vblank(true);
+                    self.nmi = self.control.nmi_enable(); // set nmi if it's enabled
                 }
             }
             _ => {}
@@ -273,17 +261,17 @@ impl PPU {
     }
 
     pub fn render_scanline(&mut self) {
-        if self.render_background {
+        if self.mask.render_background() {
             self.render_bkgd();
         }
 
-        if self.render_sprites {
+        if self.mask.render_sprites() {
             self.render_foreground();
         }
     }
 
     fn render_bkgd(&mut self) {
-        let nn = ((self.nametable_y as u16) << 1) | (self.nametable_x as u16);
+        let nn = ((self.control.nametable_y() as u16) << 1) | (self.control.nametable_x() as u16);
 
         let mut base_nt_addr: u16 = NT_START + nn * (NAMETABLE_SIZE as u16);
         let mut base_attr_addr: u16 = AT_START + nn * (NAMETABLE_SIZE as u16);
@@ -305,7 +293,7 @@ impl PPU {
         let ty = (actual_screen_y as u16) / 8; // which tile?
         let y = (actual_screen_y as u16) % 8; // which row?
 
-        let pattstart = if self.bkgd_pattern { PT1_START } else { PT0_START };
+        let pattstart = if self.control.bkgd_pattern() { PT1_START } else { PT0_START };
 
         for screen_x in 0..WIDTH {
             let mut actual_screen_x = screen_x + (self.scrollx as usize);
@@ -399,7 +387,7 @@ impl PPU {
     }
 
     pub fn debug_show_nt(&mut self, nt_start: u16) {
-        let pattstart = if self.bkgd_pattern { PT1_START } else { PT0_START };
+        let pattstart = if self.control.bkgd_pattern() { PT1_START } else { PT0_START };
 
         for ty in 0..30 {
             for tx in 0..32 {
@@ -499,7 +487,7 @@ impl PPU {
             let id = self.oam[i + 1];
             let attr = self.oam[i + 2];
 
-            let height = if self.sprite_size { 16 } else { 8 };
+            let height = if self.control.sprite_size() { 16 } else { 8 };
 
             // scanline inside sprite?
             if (self.scanline >= (spr_y as i32)) && (self.scanline < ((spr_y + height) as i32)) {
@@ -507,8 +495,8 @@ impl PPU {
 
                 let patt_addr: u16;
 
-                if !self.sprite_size {
-                    patt_addr = if self.sprite_pattern { PT1_START } else { PT0_START } + (id as u16) * 16;
+                if !self.control.sprite_size() {
+                    patt_addr = if self.control.sprite_pattern() { PT1_START } else { PT0_START } + (id as u16) * 16;
                 } else {
                     patt_addr = if test_bit!(id, 0) { PT1_START } else { PT0_START } + ((id & 0b11111110) as u16) * 16;
                 };
@@ -558,9 +546,9 @@ impl PPU {
                     } else { // else if the background pixel is opaque
                         let opaque = colour_idx > 0;
 
-                        if opaque && i == 0 && !self.sprite_zero_hit {
+                        if opaque && i == 0 && !self.status.sprite_zero_hit() {
                             // This flag is set as soon as an opaque pixel of the sprite at OAM index 0 intersects an opaque background pixel.
-                            self.sprite_zero_hit = true;
+                            self.status.set_sprite_zero_hit(true);
                         }
 
                         lets_draw = opaque && !test_bit!(attr, 5); // only draw if sprites have front priority
@@ -586,13 +574,13 @@ impl PPU {
         let mut data: u8 = 0;
         match register {
             0x2 => { // PPU STATUS
-                modify_bit!(self.prev_data, 5, self.sprite_overflow);
-                modify_bit!(self.prev_data, 6, self.sprite_zero_hit);
-                modify_bit!(self.prev_data, 7, self.vblank);
+                modify_bit!(self.prev_data, 5, self.status.sprite_overflow());
+                modify_bit!(self.prev_data, 6, self.status.sprite_zero_hit());
+                modify_bit!(self.prev_data, 7, self.status.vblank());
 
                 data = self.prev_data;
 
-                self.vblank = false;
+                self.status.set_vblank(false);
                 self.addr_latch = false;
             }
             0x4 => { // OAM DATA
@@ -607,7 +595,7 @@ impl PPU {
                     data = self.prev_data;
                 }
 
-                self.vram_address += if self.vram_increment_downwards { 32 } else { 1 };
+                self.vram_address += if self.control.vram_increment_downwards() { 32 } else { 1 };
                 if self.vram_address > 0x3FFF {
                     self.vram_address &= 0b11111111111111;
                 }
@@ -620,24 +608,10 @@ impl PPU {
     pub fn write_register(&mut self, register: usize, data: u8) {
         match register {
             0x0 => { // PPU CONTROL
-                self.nametable_x              = test_bit!(data, 0);
-                self.nametable_y              = test_bit!(data, 1);
-                self.vram_increment_downwards = test_bit!(data, 2);
-                self.sprite_pattern           = test_bit!(data, 3);
-                self.bkgd_pattern             = test_bit!(data, 4);
-                self.sprite_size              = test_bit!(data, 5);
-                self.ms_select                = test_bit!(data, 6);
-                self.nmi_enable               = test_bit!(data, 7);
+                self.control.set_raw(data);
             }
             0x1 => { // PPU MASK
-                self.grayscale                = test_bit!(data, 0);
-                self.render_background_left   = test_bit!(data, 1);
-                self.render_sprites_left      = test_bit!(data, 2);
-                self.render_background        = test_bit!(data, 3);
-                self.render_sprites           = test_bit!(data, 4);
-                self.enhance_red              = test_bit!(data, 5);
-                self.enhance_green            = test_bit!(data, 6);
-                self.enhance_blue             = test_bit!(data, 7);
+                self.mask.set_raw(data);
             }
             0x3 => { // OAM ADDRESS
                 self.oam_addr = data;
@@ -672,7 +646,7 @@ impl PPU {
             0x7 => { // PPU DATA
                 self.write_byte(self.vram_address, data);
 
-                self.vram_address += if self.vram_increment_downwards { 32 } else { 1 };
+                self.vram_address += if self.control.vram_increment_downwards() { 32 } else { 1 };
                 if self.vram_address > 0x3FFF {
                     self.vram_address &= 0b11111111111111;
                 }
@@ -682,7 +656,7 @@ impl PPU {
     }
 
     fn rendering_on(&self) -> bool {
-        return self.render_background || self.render_sprites;
+        return self.mask.render_background() || self.mask.render_sprites();
     }
 }
 
