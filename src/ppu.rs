@@ -102,7 +102,7 @@ pub struct PPU {
     // PPU DATA ($2007)
     prev_data: u8, /* AKA IO bus for open bus implementation */
 
-    oam: [u8; OAM_SIZE],
+    oam: Vec<u8>,
     addr_latch: bool,
 
     scanline: i32,
@@ -110,9 +110,9 @@ pub struct PPU {
     odd_frame: bool,
 
     // For checking whether pixels in background transparent or not
-    transparent: [bool; WIDTH * HEIGHT],
+    transparent: Vec<bool>,
 
-    pub pixels: [u8; WIDTH * HEIGHT * 3],
+    pub pixels: Vec<u8>,
     pub nmi: bool
 }
 
@@ -156,16 +156,16 @@ impl PPU {
 
             prev_data: 0,
 
-            oam: [0; OAM_SIZE],
+            oam: vec![0; OAM_SIZE],
             addr_latch: false,
 
             scanline: 0,
             cycle: 0,
             odd_frame: false,
 
-            transparent: [false; WIDTH * HEIGHT],
+            transparent: vec![false; WIDTH * HEIGHT],
 
-            pixels: [0; WIDTH * HEIGHT * 3],
+            pixels: vec![0; WIDTH * HEIGHT * 3],
             nmi: false
         }
     }

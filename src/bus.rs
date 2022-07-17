@@ -27,8 +27,8 @@ pub struct Bus {
     ppu: Weak<RefCell<PPU>>,
     joypad: Weak<RefCell<Joypad>>,
 
-    ram: [u8; RAM_SIZE],
-    io_regs: [u8; IO_REGS_COUNT]
+    ram: Vec<u8>,
+    io_regs: Vec<u8>
 }
 
 impl Bus {
@@ -40,8 +40,8 @@ impl Bus {
             ppu: weak_ppu.clone(),
             joypad: weak_joypad.clone(),
 
-            ram: [0; RAM_SIZE],
-            io_regs: [0; IO_REGS_COUNT]
+            ram: vec![0; RAM_SIZE],
+            io_regs: vec![0; IO_REGS_COUNT]
         }
     }
 
