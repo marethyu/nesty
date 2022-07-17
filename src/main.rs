@@ -9,6 +9,7 @@ mod joypad;
 mod emulator;
 mod opcodes;
 
+use std::env;
 use std::process;
 use std::thread;
 use std::time::Duration;
@@ -26,6 +27,17 @@ use emulator::Emulator;
 const DELAY: u64 = 17; // 1000ms / 59.7fps
 
 pub fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() < 2 {
+        println!("Usage: nesty [path to a ROM file]\n");
+        process::exit(1);
+    }
+
+    let mut nes = Emulator::new(&args[1]);
+
+    nes.reset();
+
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
@@ -51,15 +63,6 @@ pub fn main() {
     key_map.insert(Keycode::Return, joypad::BUTTON_START);
     key_map.insert(Keycode::A, joypad::BUTTON_A);
     key_map.insert(Keycode::S, joypad::BUTTON_B);
-
-    // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/nes-test-roms-master/cpu_exec_space/test_cpu_exec_space_ppuio.nes
-    // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Donkey Kong (World) (Rev A).nes
-    // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Super Mario Bros. (World).nes
-    // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Super_Mario_Forever_Clean_Patch.nes
-    // C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/nestest.nes
-    let mut nes = Emulator::new("C:/Users/Jimmy/OneDrive/Documents/git/nesty/roms/Super Mario Bros. (World).nes");
-
-    nes.reset();
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
