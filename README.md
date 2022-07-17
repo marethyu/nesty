@@ -11,7 +11,7 @@ cargo run --release "roms/Super Mario Bros. (World).nes"
 
 TODO:
 
-- Continue working on PPU especially y-scrolling
+- Fix some PPU bugs
 - Implement Mapper1 to play Space Harriers
 - Savestates
 - GUI
