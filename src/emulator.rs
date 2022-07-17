@@ -16,7 +16,8 @@ pub struct Emulator {
     ppu: Arc<RefCell<PPU>>, /* requires access to cartridge */
     joypad: Arc<RefCell<Joypad>>,
 
-    prev_total_cycles: u64
+    prev_total_cycles: u64,
+    penalty: u64 /* for dma timing */
 }
 
 impl Emulator {
@@ -41,7 +42,8 @@ impl Emulator {
             cpu: cpu_arc,
             ppu: ppu_arc,
             joypad: joypad_arc,
-            prev_total_cycles: 0
+            prev_total_cycles: 0,
+            penalty: 0
         }
     }
 
@@ -82,11 +84,21 @@ impl Emulator {
 
             // TODO IRQ here
 
-            self.cpu().tick();
+            if self.penalty > 0 {
+                self.cpu().total_cycles += 1;
+                self.penalty -= 1;
+            } else {
+                self.cpu().tick();
+            }
 
             let total_cycles = self.cpu().total_cycles;
             let cycles = total_cycles - self.prev_total_cycles;
             self.prev_total_cycles = total_cycles;
+
+            if self.bus().dma {
+                self.penalty = if total_cycles % 2 == 1 { 514 } else { 513 };
+                self.bus().dma = false;
+            }
 
             for _i in 0..cycles {
                 self.ppu().tick();

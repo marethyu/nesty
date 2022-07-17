@@ -33,7 +33,9 @@ pub struct Bus {
     joypad: Weak<RefCell<Joypad>>,
 
     ram: Vec<u8>,
-    io_regs: Vec<u8>
+    io_regs: Vec<u8>,
+
+    pub dma: bool
 }
 
 impl Bus {
@@ -46,7 +48,9 @@ impl Bus {
             joypad: weak_joypad.clone(),
 
             ram: vec![0; RAM_SIZE],
-            io_regs: vec![0; IO_REGS_COUNT]
+            io_regs: vec![0; IO_REGS_COUNT],
+
+            dma: false
         }
     }
 
@@ -93,18 +97,24 @@ impl IO for Bus {
                 // OAM DMA
                 if addr == 0x4014 {
                     let oam_start = (data as u16) << 8;
+
                     for i in 0..=255 {
                         let oam_data = self.read_byte(oam_start + i);
                         self.ppu().borrow_mut().dma_write_oam(oam_data);
                     }
-                    // TODO increase CPU cycles
+
+                    self.dma = true;
+
                     return;
                 }
+
+                // JOYPAD 1
                 if addr == 0x4016 {
                     self.joypad().borrow_mut().write(data);
-                } else {
-                    self.io_regs[(addr - 0x4000) as usize] = data;
+                    return;
                 }
+
+                self.io_regs[(addr - 0x4000) as usize] = data;
             }
             0x4020..=0xFFFF => { self.cart().borrow_mut().write_byte(addr, data); }
             _ => panic!("Address out of bounds: {:04X}", addr)
