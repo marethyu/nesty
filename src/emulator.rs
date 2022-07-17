@@ -1,5 +1,4 @@
-use std::cell::RefCell;
-use std::cell::RefMut;
+use std::cell::{RefCell, RefMut};
 use std::sync::Arc;
 
 use crate::m6502::M6502;
