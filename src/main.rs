@@ -1,4 +1,3 @@
-mod macros;
 mod mapper;
 mod io;
 mod cartridge;
@@ -7,7 +6,6 @@ mod bus;
 mod ppu;
 mod joypad;
 mod emulator;
-mod opcodes;
 
 use std::env;
 use std::process;
@@ -18,9 +16,6 @@ use std::collections::HashMap;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
-
-#[macro_use(lazy_static)]
-extern crate lazy_static;
 
 use emulator::Emulator;
 

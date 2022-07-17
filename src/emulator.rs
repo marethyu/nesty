@@ -16,7 +16,7 @@ pub struct Emulator {
     ppu: Arc<RefCell<PPU>>, /* requires access to cartridge */
     joypad: Arc<RefCell<Joypad>>,
 
-    prev_total_cycles: u64,
+    prev_total_cycles: u64
 }
 
 impl Emulator {

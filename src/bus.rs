@@ -7,7 +7,12 @@ use crate::joypad::Joypad;
 
 use crate::io::IO;
 
-use crate::mirror;
+#[macro_export]
+macro_rules! mirror {
+    ($base:expr, $addr:expr, $size:expr) => {
+        (($addr - $base) & (($size as u16) - 1)) as usize
+    }
+}
 
 const RAM_SIZE: usize = 0x800;
 const PPU_REG_COUNT: usize = 0x8;

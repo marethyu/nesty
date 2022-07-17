@@ -1,15 +1,27 @@
 use std::cell::RefCell;
 use std::sync::{Arc, Weak};
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::{BufWriter, Write};
 
 use crate::bus::Bus;
-use crate::opcodes;
 
 use crate::io::IO;
 
-use crate::{test_bit, modify_bit};
+#[macro_export]
+macro_rules! test_bit {
+    ($n:expr, $pos:expr) => {
+        ($n & (1 << $pos)) != 0
+    };
+}
+
+#[macro_export]
+macro_rules! modify_bit {
+    ($n:expr, $pos:expr, $is_set:expr) => {
+        if $is_set {
+            $n |= (1 << $pos);
+        } else {
+            $n &= !(1 << $pos);
+        }
+    }
+}
 
 const FLAG_N: u8 = 7;
 const FLAG_V: u8 = 6;
@@ -51,9 +63,7 @@ pub struct M6502 {
     p:   u8,
     sp:  u8,
     pc:  u16,
-
     bus: Weak<RefCell<Bus>>,
-    //log_file: BufWriter<File>,
 
     pub total_cycles: u64
 }
@@ -74,7 +84,6 @@ impl M6502 {
             sp:  0,
             pc:  0,
             bus: bus.clone(),
-            //log_file: BufWriter::new(File::create("nesty.log").expect("Unable to create file")),
             total_cycles: 0
         }
     }
@@ -121,8 +130,6 @@ impl M6502 {
     }
 
     pub fn tick(&mut self) {
-        //self.log_cpu_state();
-
         macro_rules! do_add {
             /*  for idiots who have no idea how to determine overflow,
                 please read http://users.telenet.be/kim1-6502/6502/proman.html#362 */
@@ -522,33 +529,7 @@ impl M6502 {
             _ => todo!("Halted at PC={:04X}; Unimplemented opcode: {:02X}", self.pc - 1, opcode)
         }
     }
-/*
-    fn log_cpu_state(&mut self) {
-        let ref opcodes: HashMap<u8, &'static opcodes::OpCode> = *opcodes::OPCODES_MAP;
 
-        macro_rules! write_string {
-            ($($arg:tt)*) => {
-                self.log_file.write(format!($($arg)*).as_bytes()).expect("Unable to write data");
-            }
-        }
-
-        let code = self.bus().borrow_mut().read_byte(self.pc);
-        let opcode = opcodes
-            .get(&code)
-            .expect(&format!("OpCode {:02X} is not recognized", code));
-        write_string!("{:04X}  ", self.pc);
-
-        for i in 0..opcode.len {
-            write_string!("{:02X} ", self.bus().borrow_mut().read_byte(self.pc + (i as u16)));
-        }
-        for i in 0..(3-opcode.len) {
-            write_string!("   ");
-        }
-        write_string!(" {}\t\t\t\t\t\t\t\t", opcode.mnemonic);
-
-        write_string!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X}\t\t\t  CYC:{}\n", self.a, self.x, self.y, self.p, self.sp, self.total_cycles);
-    }
-*/
     fn pull_word(&mut self) -> u16 {
         let lo = self.pull_byte() as u16;
         let hi = self.pull_byte() as u16;
