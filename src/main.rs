@@ -22,7 +22,7 @@ extern crate proc_bitfield;
 
 use emulator::Emulator;
 
-const DELAY: u64 = 17; // 1000ms / 59.7fps
+const DELAY: u32 = 17; // 1000ms / 59.7fps
 
 pub fn main() {
     let args: Vec<String> = env::args().collect();
@@ -68,6 +68,9 @@ pub fn main() {
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
+    let timer_subsystem = sdl_context.timer().unwrap();
+    let mut next = timer_subsystem.ticks() + DELAY;
+
     loop {
         for event in event_pump.poll_iter() {
             match event {
@@ -93,6 +96,15 @@ pub fn main() {
         canvas.copy(&texture, None, None).unwrap();
         canvas.present();
 
-        thread::sleep(Duration::from_millis(DELAY));
+        let now = timer_subsystem.ticks();
+        let delay = if now < next {
+            next - now
+        } else {
+            0
+        };
+
+        thread::sleep(Duration::from_millis(delay as u64));
+
+        next += DELAY;
     }
 }
