@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::sync::{Arc, Weak};
+use std::rc::{Rc, Weak};
 
 use crate::cartridge::Cartridge;
 use crate::mapper::Mirroring;
@@ -211,7 +211,7 @@ impl PPU {
         }
     }
 
-    fn cart(&self) -> Arc<RefCell<Cartridge>> {
+    fn cart(&self) -> Rc<RefCell<Cartridge>> {
         self.cart.upgrade().expect("Cartridge lost for ppu")
     }
 

@@ -1,5 +1,5 @@
 use std::cell::{RefCell, RefMut};
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::m6502::M6502;
 use crate::ppu::PPU;
@@ -10,11 +10,11 @@ use crate::joypad::Joypad;
 const CYCLES_PER_FRAME: u64 = 29781; // how many CPU cycles required to render one frame
 
 pub struct Emulator {
-    cart: Arc<RefCell<Cartridge>>,
-    bus: Arc<RefCell<Bus>>, /* requirs access to cartridge, ppu, and joypad */
-    cpu: Arc<RefCell<M6502>>, /* requires access to bus */
-    ppu: Arc<RefCell<PPU>>, /* requires access to cartridge */
-    joypad: Arc<RefCell<Joypad>>,
+    cart: Rc<RefCell<Cartridge>>,
+    bus: Rc<RefCell<Bus>>, /* requirs access to cartridge, ppu, and joypad */
+    cpu: Rc<RefCell<M6502>>, /* requires access to bus */
+    ppu: Rc<RefCell<PPU>>, /* requires access to cartridge */
+    joypad: Rc<RefCell<Joypad>>,
 
     prev_total_cycles: u64,
     penalty: u64 /* for dma timing */
@@ -22,26 +22,26 @@ pub struct Emulator {
 
 impl Emulator {
     pub fn new(fname: &str) -> Self {
-        let cart_arc = Arc::new(RefCell::new(Cartridge::new(fname)));
-        let weak_cart = Arc::downgrade(&cart_arc);
+        let cart_ref = Rc::new(RefCell::new(Cartridge::new(fname)));
+        let weak_cart = Rc::downgrade(&cart_ref);
 
-        let ppu_arc = Arc::new(RefCell::new(PPU::new(weak_cart.clone())));
-        let weak_ppu = Arc::downgrade(&ppu_arc);
+        let ppu_ref = Rc::new(RefCell::new(PPU::new(weak_cart.clone())));
+        let weak_ppu = Rc::downgrade(&ppu_ref);
 
-        let joypad_arc = Arc::new(RefCell::new(Joypad::new()));
-        let weak_joypad = Arc::downgrade(&joypad_arc);
+        let joypad_ref = Rc::new(RefCell::new(Joypad::new()));
+        let weak_joypad = Rc::downgrade(&joypad_ref);
 
-        let bus_arc = Arc::new(RefCell::new(Bus::new(weak_cart.clone(), weak_ppu.clone(), weak_joypad.clone())));
-        let weak_bus = Arc::downgrade(&bus_arc);
+        let bus_ref = Rc::new(RefCell::new(Bus::new(weak_cart.clone(), weak_ppu.clone(), weak_joypad.clone())));
+        let weak_bus = Rc::downgrade(&bus_ref);
 
-        let cpu_arc = Arc::new(RefCell::new(M6502::new(weak_bus.clone())));
+        let cpu_ref = Rc::new(RefCell::new(M6502::new(weak_bus.clone())));
 
         Emulator {
-            cart: cart_arc,
-            bus: bus_arc,
-            cpu: cpu_arc,
-            ppu: ppu_arc,
-            joypad: joypad_arc,
+            cart: cart_ref,
+            bus: bus_ref,
+            cpu: cpu_ref,
+            ppu: ppu_ref,
+            joypad: joypad_ref,
             prev_total_cycles: 0,
             penalty: 0
         }

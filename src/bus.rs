@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::sync::{Arc, Weak};
+use std::rc::{Rc, Weak};
 
 use crate::ppu::PPU;
 use crate::cartridge::Cartridge;
@@ -76,15 +76,15 @@ impl Bus {
         }
     }
 
-    pub fn cart(&self) -> Arc<RefCell<Cartridge>> {
+    pub fn cart(&self) -> Rc<RefCell<Cartridge>> {
         self.cart.upgrade().expect("Cartridge lost for bus")
     }
 
-    pub fn ppu(&self) -> Arc<RefCell<PPU>> {
+    pub fn ppu(&self) -> Rc<RefCell<PPU>> {
         self.ppu.upgrade().expect("PPU lost for bus")
     }
 
-    pub fn joypad(&self) -> Arc<RefCell<Joypad>> {
+    pub fn joypad(&self) -> Rc<RefCell<Joypad>> {
         self.joypad.upgrade().expect("Joypad lost for bus")
     }
 }

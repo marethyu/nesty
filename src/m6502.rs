@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::sync::{Arc, Weak};
+use std::rc::{Rc, Weak};
 
 use crate::bus::Bus;
 
@@ -88,7 +88,7 @@ impl M6502 {
         }
     }
 
-    fn bus(&self) -> Arc<RefCell<Bus>> {
+    fn bus(&self) -> Rc<RefCell<Bus>> {
         self.bus.upgrade().expect("Bus lost for cpu")
     }
 
