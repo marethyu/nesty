@@ -1,6 +1,6 @@
 use crate::mapper::{Mirroring, Mapper, SRAM_SIZE};
 
-use crate::{test_bit, mirror};
+use crate::{test_bit, mirror, box_array};
 
 pub struct Mapper1 {
     mirroring_type: Mirroring,
@@ -11,7 +11,7 @@ pub struct Mapper1 {
     prg_rom: Vec<u8>,
     chr_rom: Vec<u8>,
 
-    sram: Vec<u8>
+    sram: Box<[u8; SRAM_SIZE]>
 }
 
 impl Mapper1 {
@@ -25,7 +25,7 @@ impl Mapper1 {
             prg_rom: prg_rom,
             chr_rom: chr_rom,
 
-            sram: vec![0; SRAM_SIZE]
+            sram: box_array![0; SRAM_SIZE]
         }
     }
 

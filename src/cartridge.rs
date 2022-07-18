@@ -6,7 +6,7 @@ use crate::mapper::{Mirroring, Mapper, PRG_ROM_BANK_SIZE, CHR_ROM_BANK_SIZE};
 use crate::mapper::mapper0::Mapper0;
 use crate::mapper::mapper1::Mapper1;
 
-use crate::test_bit;
+use crate::{test_bit, box_array};
 
 const INES_IDENT: [u8; 4] = [0x4E, 0x45, 0x53, 0x1A];
 
@@ -14,7 +14,7 @@ const EXPANSION_AREA_SIZE: usize = 0x1FE0;
 
 pub struct Cartridge {
     mapper: Box<dyn Mapper>,
-    expansion_area: Vec<u8>
+    expansion_area: Box<[u8; EXPANSION_AREA_SIZE]>
 }
 
 impl Cartridge {
@@ -66,7 +66,7 @@ impl Cartridge {
 
         Cartridge {
             mapper: mapper,
-            expansion_area: vec![0; EXPANSION_AREA_SIZE]
+            expansion_area: box_array![0; EXPANSION_AREA_SIZE]
         }
     }
 

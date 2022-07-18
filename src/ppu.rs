@@ -5,7 +5,7 @@ use crate::cartridge::Cartridge;
 use crate::mapper::Mirroring;
 use crate::io::IO;
 
-use crate::{test_bit, modify_bit, mirror};
+use crate::{test_bit, modify_bit, mirror, box_array};
 
 macro_rules! toggle_bit {
     ($n:expr, $pos:expr) => {
@@ -140,8 +140,8 @@ pub struct PPU {
     // Index 1 is nametable 1 ($2400-$27FF)
     // Index 2 is nametable 2 ($2800-$2BFF)
     // Index 3 is nametable 3 ($2C00-$2FFF)
-    nametable: [Vec<u8>; 4],
-    palette_ram: Vec<u8>,
+    nametable: [Box<[u8; NAMETABLE_SIZE]>; 4],
+    palette_ram: Box<[u8; PALETTE_RAM_SIZE]>,
 
     // PPU CONTROL ($2000)
     control: ControlRegister,
@@ -158,7 +158,7 @@ pub struct PPU {
     // PPU DATA ($2007)
     prev_data: u8, /* AKA IO bus for open bus implementation */
 
-    oam: Vec<u8>,
+    oam: Box<[u8; OAM_SIZE]>,
 
     // Internal registers
     vram_address: VRAMAddress,
@@ -171,7 +171,7 @@ pub struct PPU {
     odd_frame: bool,
 
     // For checking whether pixels in background transparent or not
-    transparent: Vec<bool>,
+    transparent: Box<[bool; WIDTH * HEIGHT]>,
 
     pub pixels: Vec<u8>,
     pub nmi: bool
@@ -182,8 +182,8 @@ impl PPU {
         PPU {
             cart: cart.clone(),
 
-            nametable: [(); 4].map(|_| vec![0; NAMETABLE_SIZE]),
-            palette_ram: vec![0; PALETTE_RAM_SIZE],
+            nametable: [(); 4].map(|_| box_array![0; NAMETABLE_SIZE]),
+            palette_ram: box_array![0; PALETTE_RAM_SIZE],
 
             control: ControlRegister(0),
             mask: MaskRegister(0),
@@ -193,7 +193,7 @@ impl PPU {
 
             prev_data: 0,
 
-            oam: vec![0; OAM_SIZE],
+            oam: box_array![0; OAM_SIZE],
 
             vram_address: VRAMAddress(0),
             temp_vram_address: VRAMAddress(0),
@@ -204,7 +204,7 @@ impl PPU {
             cycle: 0,
             odd_frame: false,
 
-            transparent: vec![false; WIDTH * HEIGHT],
+            transparent: box_array![false; WIDTH * HEIGHT],
 
             pixels: vec![0; WIDTH * HEIGHT * 3],
             nmi: false

@@ -14,6 +14,28 @@ macro_rules! mirror {
     }
 }
 
+/// A macro similar to `vec![$elem; $size]` which returns a boxed array.
+///
+/// ```rustc
+///     let _: Box<[u8; 1024]> = box_array![0; 1024];
+/// ```
+/// Source: https://stackoverflow.com/a/68122278/12126813
+#[macro_export]
+macro_rules! box_array {
+    ($val:expr ; $len:expr) => {{
+        // Use a generic function so that the pointer cast remains type-safe
+        fn vec_to_boxed_array<T>(vec: Vec<T>) -> Box<[T; $len]> {
+            let boxed_slice = vec.into_boxed_slice();
+
+            let ptr = ::std::boxed::Box::into_raw(boxed_slice) as *mut [T; $len];
+
+            unsafe { Box::from_raw(ptr) }
+        }
+
+        vec_to_boxed_array(vec![$val; $len])
+    }};
+}
+
 const RAM_SIZE: usize = 0x800;
 const PPU_REG_COUNT: usize = 0x8;
 const IO_REGS_COUNT: usize = 0x20;
@@ -32,8 +54,8 @@ pub struct Bus {
     ppu: Weak<RefCell<PPU>>,
     joypad: Weak<RefCell<Joypad>>,
 
-    ram: Vec<u8>,
-    io_regs: Vec<u8>,
+    ram: Box<[u8; RAM_SIZE]>,
+    io_regs: Box<[u8; IO_REGS_COUNT]>,
 
     pub dma: bool
 }
@@ -47,8 +69,8 @@ impl Bus {
             ppu: weak_ppu.clone(),
             joypad: weak_joypad.clone(),
 
-            ram: vec![0; RAM_SIZE],
-            io_regs: vec![0; IO_REGS_COUNT],
+            ram: box_array![0; RAM_SIZE],
+            io_regs: box_array![0; IO_REGS_COUNT],
 
             dma: false
         }
