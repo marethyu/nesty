@@ -40,15 +40,6 @@ const RAM_SIZE: usize = 0x800;
 const PPU_REG_COUNT: usize = 0x8;
 const IO_REGS_COUNT: usize = 0x20;
 
-/*
-CPU Memory Map (16bit buswidth, 0-FFFFh)
-  0000h-07FFh   Internal 2K Work RAM (mirrored to 800h-1FFFh)
-  2000h-2007h   Internal PPU Registers (mirrored to 2008h-3FFFh)
-  4000h-401Fh   For use in APU and other IO devices
-  4020h-5FFFh   Cartridge Expansion Area almost 8K
-  6000h-7FFFh   Cartridge SRAM Area 8K
-  8000h-FFFFh   Cartridge PRG-ROM Area 32K
-*/
 pub struct Bus {
     cart: Weak<RefCell<Cartridge>>,
     ppu: Weak<RefCell<PPU>>,
@@ -89,6 +80,15 @@ impl Bus {
     }
 }
 
+/*
+CPU Memory Map (16bit buswidth, 0-FFFFh)
+  0000h-07FFh   Internal 2K Work RAM (mirrored to 800h-1FFFh)
+  2000h-2007h   Internal PPU Registers (mirrored to 2008h-3FFFh)
+  4000h-401Fh   For use in APU and other IO devices
+  4020h-5FFFh   Cartridge Expansion Area almost 8K
+  6000h-7FFFh   Cartridge SRAM Area 8K
+  8000h-FFFFh   Cartridge PRG-ROM Area 32K
+*/
 impl IO for Bus {
     fn read_byte(&mut self, addr: u16) -> u8 {
         match addr {
