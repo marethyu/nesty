@@ -280,7 +280,7 @@ impl PPU {
                     self.render_scanline();
                 }
 
-                if self.scanline >= 0 && (self.cycle == 328 && self.cycle == 336) {
+                if self.scanline >= 0 && (self.cycle == 328 || self.cycle == 336) {
                     self.inc_scrollx();
                 }
             }
