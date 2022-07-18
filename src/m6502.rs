@@ -23,6 +23,12 @@ macro_rules! modify_bit {
     }
 }
 
+macro_rules! page_cross {
+    ($addr1:expr, $addr2:expr) => {
+        ($addr1 & 0xFF00) != ($addr2 & 0xFF00)
+    }
+}
+
 const FLAG_N: u8 = 7;
 const FLAG_V: u8 = 6;
 const FLAG_U: u8 = 5; // unused
@@ -66,12 +72,6 @@ pub struct M6502 {
     bus: Weak<RefCell<Bus>>,
 
     pub total_cycles: u64
-}
-
-macro_rules! page_cross {
-    ($addr1:expr, $addr2:expr) => {
-        ($addr1 & 0xFF00) != ($addr2 & 0xFF00)
-    }
 }
 
 impl M6502 {
