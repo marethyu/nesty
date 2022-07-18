@@ -135,12 +135,12 @@ PPU Memory Map (14bit buswidth, 0-3FFFh)
 pub struct PPU {
     cart: Weak<RefCell<Cartridge>>, /* for accessing pattern table */
 
-    // Nametable is represented by array of 4 0x400 byte values
+    // Nametables are represented by array of 4 vectors of size 0x400
     // Index 0 is nametable 0 ($2000-$23FF)
     // Index 1 is nametable 1 ($2400-$27FF)
     // Index 2 is nametable 2 ($2800-$2BFF)
     // Index 3 is nametable 3 ($2C00-$2FFF)
-    nametable: Vec<Vec<u8>>,
+    nametable: [Vec<u8>; 4],
     palette_ram: Vec<u8>,
 
     // PPU CONTROL ($2000)
@@ -182,7 +182,7 @@ impl PPU {
         PPU {
             cart: cart.clone(),
 
-            nametable: vec![vec![0; NAMETABLE_SIZE]; 4],
+            nametable: [(); 4].map(|_| vec![0; NAMETABLE_SIZE]),
             palette_ram: vec![0; PALETTE_RAM_SIZE],
 
             control: ControlRegister(0),
