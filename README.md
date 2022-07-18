@@ -15,4 +15,4 @@ TODO:
 - Implement Mapper1 to play Space Harrier
 - Run test ROMs
 - Savestates
-- GUI
+- Debugger (use imgui)
