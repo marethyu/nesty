@@ -1,4 +1,4 @@
-use crate::mapper::{Mirroring, Mapper};
+use crate::mapper::{Mirroring, Mapper, SRAM_SIZE};
 
 use crate::mirror;
 
@@ -9,6 +9,8 @@ pub struct Mapper0 {
 
     prg_rom: Vec<u8>, /* TODO it can be written?!? */
     chr_rom: Vec<u8>, /* TODO it can be written?!? */
+
+    sram: Vec<u8>
 }
 
 impl Mapper0 {
@@ -17,7 +19,8 @@ impl Mapper0 {
             mirroring_type: mirroring_type,
             prg_rom_size: prg_rom_size,
             prg_rom: prg_rom,
-            chr_rom: chr_rom
+            chr_rom: chr_rom,
+            sram: vec![0; SRAM_SIZE]
         }
     }
 }
@@ -25,6 +28,7 @@ impl Mapper0 {
 impl Mapper for Mapper0 {
     fn cpu_read_byte(&self, addr: u16) -> u8 {
         match addr {
+            0x6000..=0x7FFF => self.sram[mirror!(0x6000, addr, SRAM_SIZE)],
             0x8000..=0xFFFF => self.prg_rom[mirror!(0x8000, addr, self.prg_rom_size)],
             _ => panic!("Address out of bounds: {:04X}", addr)
         }
@@ -32,6 +36,9 @@ impl Mapper for Mapper0 {
 
     fn cpu_write_byte(&mut self, addr: u16, data: u8) {
         match addr {
+            0x6000..=0x7FFF => {
+                self.sram[mirror!(0x6000, addr, SRAM_SIZE)] = data;
+            }
             0x8000..=0xFFFF => {}
             _ => panic!("Address out of bounds: {:04X}", addr)
         }
