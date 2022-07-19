@@ -4,6 +4,7 @@ mod cartridge;
 mod m6502;
 mod bus;
 mod ppu;
+mod dma;
 mod joypad;
 mod emulator;
 

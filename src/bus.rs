@@ -48,7 +48,8 @@ pub struct Bus {
     ram: Box<[u8; RAM_SIZE]>,
     io_regs: Box<[u8; IO_REGS_COUNT]>,
 
-    pub dma: bool
+    pub init_dma: bool,
+    pub dma_start_addr: u16
 }
 
 impl Bus {
@@ -63,7 +64,8 @@ impl Bus {
             ram: box_array![0; RAM_SIZE],
             io_regs: box_array![0; IO_REGS_COUNT],
 
-            dma: false
+            init_dma: false,
+            dma_start_addr: 0
         }
     }
 
@@ -118,15 +120,8 @@ impl IO for Bus {
             0x4000..=0x401F => {
                 // OAM DMA
                 if addr == 0x4014 {
-                    let oam_start = (data as u16) << 8;
-
-                    for i in 0..=255 {
-                        let oam_data = self.read_byte(oam_start + i);
-                        self.ppu().borrow_mut().dma_write_oam(oam_data);
-                    }
-
-                    self.dma = true;
-
+                    self.init_dma = true;
+                    self.dma_start_addr = (data as u16) << 8;
                     return;
                 }
 

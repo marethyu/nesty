@@ -3,6 +3,7 @@ use std::rc::Rc;
 
 use crate::m6502::M6502;
 use crate::ppu::PPU;
+use crate::dma::DMA;
 use crate::cartridge::Cartridge;
 use crate::bus::Bus;
 use crate::joypad::Joypad;
@@ -14,10 +15,10 @@ pub struct Emulator {
     bus: Rc<RefCell<Bus>>, /* requirs access to cartridge, ppu, and joypad */
     cpu: Rc<RefCell<M6502>>, /* requires access to bus */
     ppu: Rc<RefCell<PPU>>, /* requires access to cartridge */
+    dma: Rc<RefCell<DMA>>, /* requires access to cpu, ppu, and bus */
     joypad: Rc<RefCell<Joypad>>,
 
-    prev_total_cycles: u64,
-    penalty: u64 /* for dma timing */
+    prev_total_cycles: u64
 }
 
 impl Emulator {
@@ -31,19 +32,30 @@ impl Emulator {
         let joypad_ref = Rc::new(RefCell::new(Joypad::new()));
         let weak_joypad = Rc::downgrade(&joypad_ref);
 
-        let bus_ref = Rc::new(RefCell::new(Bus::new(weak_cart.clone(), weak_ppu.clone(), weak_joypad.clone())));
+        let bus_ref = Rc::new(RefCell::new(Bus::new(
+            weak_cart.clone(),
+            weak_ppu.clone(),
+            weak_joypad.clone()
+        )));
         let weak_bus = Rc::downgrade(&bus_ref);
 
         let cpu_ref = Rc::new(RefCell::new(M6502::new(weak_bus.clone())));
+        let weak_cpu = Rc::downgrade(&cpu_ref);
+
+        let dma_ref = Rc::new(RefCell::new(DMA::new(
+            weak_cpu.clone(),
+            weak_ppu.clone(),
+            weak_bus.clone())
+        ));
 
         Emulator {
             cart: cart_ref,
             bus: bus_ref,
             cpu: cpu_ref,
             ppu: ppu_ref,
+            dma: dma_ref,
             joypad: joypad_ref,
-            prev_total_cycles: 0,
-            penalty: 0
+            prev_total_cycles: 0
         }
     }
 
@@ -61,6 +73,10 @@ impl Emulator {
 
     pub fn ppu(&self) -> RefMut<'_, PPU> {
         self.ppu.borrow_mut()
+    }
+
+    pub fn dma(&self) -> RefMut<'_, DMA> {
+        self.dma.borrow_mut()
     }
 
     pub fn joypad(&self) -> RefMut<'_, Joypad> {
@@ -84,21 +100,21 @@ impl Emulator {
 
             // TODO IRQ here
 
-            if self.penalty > 0 {
-                self.cpu().total_cycles += 1;
-                self.penalty -= 1;
+            if self.dma().active {
+                // cpu is stalled during dma transfer
+                self.dma().do_transfer();
             } else {
                 self.cpu().tick();
+
+                if self.bus().init_dma {
+                    self.dma().init_transfer(self.bus().dma_start_addr);
+                    self.bus().init_dma = false;
+                }
             }
 
             let total_cycles = self.cpu().total_cycles;
             let cycles = total_cycles - self.prev_total_cycles;
             self.prev_total_cycles = total_cycles;
-
-            if self.bus().dma {
-                self.penalty = if total_cycles % 2 == 1 { 514 } else { 513 };
-                self.bus().dma = false;
-            }
 
             for _i in 0..cycles {
                 self.ppu().tick();
