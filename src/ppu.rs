@@ -719,7 +719,7 @@ impl PPU {
 
         let fine_y = self.vram_address.fine_y();
         // Move downwards in terms of fine y not coarse y
-        if fine_y == 8 {
+        if fine_y == 7 {
             self.vram_address.set_fine_y(0);
 
             let coarse_y = self.vram_address.coarse_y();
