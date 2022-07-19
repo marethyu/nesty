@@ -524,13 +524,17 @@ impl PPU {
             let id = self.oam[i + 1];
             let attr = self.oam[i + 2];
 
-            let height = if self.control.sprite_size() { 16 } else { 8 };
+            let height = if self.control.sprite_size() {
+                16
+            } else {
+                8
+            };
 
             // scanline inside sprite?
             if (self.scanline >= (spr_y as i32)) && (self.scanline < ((spr_y + height) as i32)) {
                 let mut y = (self.scanline as u8) - spr_y; // which row in sprite tile?
 
-                let patt_addr: u16;
+                let mut patt_addr: u16;
 
                 if !self.control.sprite_size() {
                     patt_addr = if self.control.sprite_pattern() { PT1_START } else { PT0_START } + (id as u16) * 16;
@@ -541,7 +545,7 @@ impl PPU {
                 let palno = attr & 0b00000011;
 
                 if test_bit!(attr, 7) {
-                    y = 8 - y; // vertical flip
+                    y = height - y; // vertical flip
                 }
 
                 let palette_start = FRAME_PAL_START + 16 + (palno as u16) * 4;
@@ -549,6 +553,11 @@ impl PPU {
                                        self.read_byte(palette_start + 1) as usize,
                                        self.read_byte(palette_start + 2) as usize,
                                        self.read_byte(palette_start + 3) as usize];
+
+                // For 8x16 sprites, move to the next tile if necessary
+                if y >= 8 {
+                    patt_addr += 8;
+                }
 
                 let mut lo = self.read_byte(patt_addr + (y as u16));
                 let mut hi = self.read_byte(patt_addr + (y as u16) + 8);
