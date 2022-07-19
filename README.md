@@ -12,7 +12,8 @@ cargo run --release "roms/Super Mario Bros. (World).nes"
 TODO:
 
 - Fix some PPU bugs
-- Implement Mapper1 to play Space Harrier
+  * sprites not rendering properly in Space Harrier
+  * vertical scrolling doesn't seem right in Space Harrier
 - Run test ROMs
 - Savestates
 - Debugger (use imgui)

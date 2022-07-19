@@ -68,7 +68,7 @@ impl Emulator {
     }
 
     pub fn reset(&mut self) {
-        /* TODO reset cartridge as well */
+        self.cart().reset();
         self.cpu().reset();
         self.ppu().reset();
     }

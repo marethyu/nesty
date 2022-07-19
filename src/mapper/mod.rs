@@ -13,6 +13,7 @@ pub enum Mirroring {
 }
 
 pub trait Mapper {
+    fn reset(&mut self);
     fn cpu_read_byte(&self, addr: u16) -> u8;
     fn cpu_write_byte(&mut self, addr: u16, data: u8);
     fn ppu_read_byte(&self, addr: u16) -> u8;

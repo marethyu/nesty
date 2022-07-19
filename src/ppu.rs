@@ -804,6 +804,9 @@ impl IO for PPU {
 
     fn write_byte(&mut self, addr: u16, data: u8) {
         match addr {
+            0x0000..=0x1FFF => {
+                self.cart().borrow_mut().write_byte(addr, data);
+            }
             0x2000..=0x3EFF => {
                 let a = mirror!(0x2000, addr, NAMETABLE_SIZE * 4);
                 let nt_addr = mirror!(0x2000, addr, NAMETABLE_SIZE);

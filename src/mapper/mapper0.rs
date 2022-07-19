@@ -26,6 +26,8 @@ impl Mapper0 {
 }
 
 impl Mapper for Mapper0 {
+    fn reset(&mut self) {}
+
     fn cpu_read_byte(&self, addr: u16) -> u8 {
         match addr {
             0x6000..=0x7FFF => self.sram[mirror!(0x6000, addr, SRAM_SIZE)],

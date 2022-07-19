@@ -70,6 +70,10 @@ impl Cartridge {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.mapper.reset();
+    }
+
     pub fn mirroring(&self) -> Mirroring {
         self.mapper.mirroring()
     }
