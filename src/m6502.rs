@@ -282,20 +282,11 @@ impl M6502 {
             };
         }
 
-        // TODO verify
         macro_rules! brk {
-            /*  BRK initiates a software interrupt similar to a hardware
-                interrupt (IRQ). The return address pushed to the stack is
-                PC+2, providing an extra byte of spacing for a break mark
-                (identifying a reason for the break.)
-                The status register will be pushed to the stack with the break
-                flag set to 1. However, when retrieved during RTI or by a PLP
-                instruction, the break flag will be ignored.
-                The interrupt disable flag is not set automatically. */
             () => {
                 self.push_word(self.pc + 1);
-                self.push_byte(self.p | 0b00110000); stk_adjust_ph_cycles!(); // TODO bits 5?
-                modify_bit!(self.p, FLAG_I, true); // TODO is it necessary??
+                self.push_byte(self.p | 0b00110000); stk_adjust_ph_cycles!();
+                modify_bit!(self.p, FLAG_I, true);
                 self.pc = self.cpu_read_word(BRK_ADDR);
             };
         }
