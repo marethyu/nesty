@@ -2,17 +2,18 @@
 
 WIP NES emulator
 
-![mario](mario.gif)
+![mario](media/mario.gif)
+
+![space harrier](media/space-harrier.gif)
 
 Run:
 ```
-cargo run --release "roms/Super Mario Bros. (World).nes"
+cargo run --release "[ROM FILE].nes"
 ```
 
 TODO:
 
 - Fix some PPU bugs
-  * sprites not rendering properly in Space Harrier
 - Run test ROMs
 - Savestates
 - Debugger (use imgui)
