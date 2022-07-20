@@ -1,13 +1,3 @@
-mod mapper;
-mod io;
-mod cartridge;
-mod m6502;
-mod bus;
-mod ppu;
-mod dma;
-mod joypad;
-mod emulator;
-
 use std::env;
 use std::process;
 use std::thread;
@@ -18,10 +8,9 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
 
-#[macro_use(bitfield)]
-extern crate proc_bitfield;
-
-use emulator::Emulator;
+use core::emulator::Emulator;
+use core::ppu;
+use core::joypad;
 
 const DELAY: u32 = 17; // 1000ms / 59.7fps
 
