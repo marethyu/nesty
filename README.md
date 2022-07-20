@@ -15,5 +15,7 @@ TODO:
 
 - Fix some PPU bugs
 - Run test ROMs
-- Savestates
-- Debugger (use imgui)
+- More mappers
+- Savestates and maybe rewind
+- Port to web using emscripten
+- Nametable previews
