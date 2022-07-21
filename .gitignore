@@ -1,2 +1,7 @@
 /target
 /roms/*
+
+!/roms/nestest.log
+!/roms/nestest.nes
+!/roms/nestest.txt
+!/roms/Super_Mario_Forever_Clean_Patch.nes
