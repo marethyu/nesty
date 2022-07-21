@@ -1,7 +1,7 @@
-import { Nesty, default as init } from './pkg/nesty_web.js';
+import { Nesty, default as init } from './nesty_web.js';
 
 /* Initialize wasm first */
-await init('./pkg/nesty_web_bg.wasm');
+await init('./nesty_web_bg.wasm');
 
 const SCREEN_WIDTH = 256;
 const SCREEN_HEIGHT = 240;
