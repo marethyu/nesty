@@ -25,7 +25,8 @@ jobs:
       - name: Create necessary wasm files
         run: wasm-pack build --release --target web
 
-      - name: Move index.html and script.js into the generated repo pkg/
+      # pkg/ folder contains .gitignore so don't use it!
+      - name: Move index.html and script.js into the generated repo pkg/ then copy pkg/ to public/
         run: |
           cp index.html pkg/
           cp script.js pkg/
@@ -34,12 +35,6 @@ jobs:
           rm -rf pkg/*
           cd public
           ls .
-
-#      - name: Deploy
-#        uses: peaceiris/actions-gh-pages@v3
-#        with:
-#          github_token: ${{ secrets.GITHUB_TOKEN }}
-#          publish_dir: platform/web/pkg
 
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
