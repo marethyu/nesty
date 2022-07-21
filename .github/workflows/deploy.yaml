@@ -31,8 +31,7 @@ jobs:
           rm -f pkg/.gitignore
           mkdir public
           cp -R ./pkg/ ./public/
-          cp index.html public/
-          cp script.js public/
+          cp -t ./public index.html script.js
           rm -rf pkg/*
           cd public
           ls .
