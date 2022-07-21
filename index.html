@@ -2,26 +2,24 @@
   <head>
     <title>NESTY</title>
     <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
-    <style>
-      body {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-      }
-    </style>
+    <link rel="stylesheet" type="text/css" href="style.css" />
   </head>
   <body>
     <script type="module" src="./script.js"></script>
     <canvas id="display" width="512", height="480" style="background: black" tabindex=0></canvas>
     <div>
-      <label for="open-rom">Open .nes file</label>
-      <input type="file" id="input" name="open-rom" accept=".nes" />
+      <button style="display:block;width:140px; height:20px;" onclick="document.getElementById('rom-input').click()">Open local .nes file</button>
+      <input type="file" accept=".nes" id="rom-input" style="display:none">
+    </div>
+    <div>
+      <form action="#">
+        <label for="lang">Try a sample!</label>
+        <select id="samples-select">
+          <option value="select">Select a sample</option>
+          <option value="nestest">nestest</option>
+          <option value="sm-forever">Super Mario Forever</option>
+        </select>
+      </form>
     </div>
   </body>
 </html>
