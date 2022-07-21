@@ -29,11 +29,19 @@ jobs:
         run: |
           cp index.html pkg/
           cp script.js pkg/
-          cd pkg
+          mkdir public
+          cp pkg/* public
+          rm -rf pkg/*
+          cd public
           ls .
 
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
+#      - name: Deploy
+#        uses: peaceiris/actions-gh-pages@v3
+#        with:
+#          github_token: ${{ secrets.GITHUB_TOKEN }}
+#          publish_dir: platform/web/pkg
+
+      - uses: JamesIves/github-pages-deploy-action@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: platform/web/pkg
+          folder: platform/web/public
+          branch: gh-pages
