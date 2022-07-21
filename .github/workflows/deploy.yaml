@@ -32,7 +32,7 @@ jobs:
           mkdir public
           cp -R ./pkg/ ./public/
           cp -R ../../roms/ ./public
-          cp -t ./public index.html script.js
+          cp -t ./public index.html style.css script.js
           rm -rf pkg/*
           cd public
           ls .
