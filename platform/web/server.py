@@ -21,7 +21,7 @@ class HttpRequestHandler(http.server.SimpleHTTPRequestHandler):
 httpd = socketserver.TCPServer(("localhost", PORT), HttpRequestHandler)
 
 try:
-    print(f"serving at http://localhost:{PORT}")
+    print(f"Serving at http://localhost:{PORT}")
     httpd.serve_forever()
 except KeyboardInterrupt:
     pass

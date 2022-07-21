@@ -7,6 +7,7 @@ const SCREEN_WIDTH = 256;
 const SCREEN_HEIGHT = 240;
 
 const display = document.getElementById("display");
+const selector = document.getElementById("samples-select");
 
 const nesty = Nesty.new();
 
@@ -49,6 +50,13 @@ function renderLoop() {
 /* Main logic happens here */
 requestAnimationFrame(renderLoop);
 
+function loadROM(rom) {
+    nesty.load_rom(rom);
+    nesty.reset();
+
+    romLoaded = true;
+}
+
 function openROM(e) {
     const romFile = e.target.files[0];
     if (!romFile) {
@@ -58,17 +66,35 @@ function openROM(e) {
     const reader = new FileReader();
     reader.onload = function(e) {
         const rom = new Uint8Array(e.target.result);
-
-        nesty.load_rom(rom);
-        nesty.reset();
-
-        romLoaded = true;
+        loadROM(rom);
     };
 
     reader.readAsArrayBuffer(romFile);
 }
 
-document.getElementById('input').addEventListener('change', openROM, false);
+function openROM2(romPath) {
+    var result = null;
+    var xhr = new XMLHttpRequest();
+
+    xhr.open("GET", romPath, true);
+    xhr.overrideMimeType("text/plain; charset=x-user-defined");
+    xhr.responseType = "arraybuffer";
+
+    xhr.onload = function(e) {
+        if (this.status == 200) {
+            var rom = new Uint8Array(this.response);
+            loadROM(rom);
+        }
+    }
+
+    xhr.onerror = function(e) {
+        alert("XHR error: " + e.target.status);
+    };
+
+    xhr.send();
+}
+
+document.getElementById('rom-input').addEventListener('change', openROM, false);
 
 display.addEventListener('keydown', (event) => {
     if (event.code == "KeyA")       nesty.press_key(0);
@@ -90,4 +116,17 @@ display.addEventListener('keyup', (event) => {
     if (event.code == "ArrowDown")  nesty.release_key(5);
     if (event.code == "ArrowLeft")  nesty.release_key(6);
     if (event.code == "ArrowRight") nesty.release_key(7);
+}, false);
+
+selector.addEventListener("change", () => {
+    switch (selector.value) {
+        case "nestest": openROM2("./roms/nestest.nes"); break;
+        case "sm-forever": openROM2("./roms/Super_Mario_Forever_Clean_Patch.nes"); break;
+    }
+});
+
+window.addEventListener("keydown", function(e) {
+    if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
+        e.preventDefault();
+    }
 }, false);

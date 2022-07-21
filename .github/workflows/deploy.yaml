@@ -26,11 +26,12 @@ jobs:
         run: wasm-pack build --release --target web
 
       # pkg/ folder contains .gitignore so don't use it!
-      - name: Create public/ and copy index.html, script.js and pkg/ into this folder
+      - name: Create public/ and copy index.html, script.js, pkg/, and roms/ into this folder
         run: |
           rm -f pkg/.gitignore
           mkdir public
           cp -R ./pkg/ ./public/
+          cp -R ../../roms/ ./public
           cp -t ./public index.html script.js
           rm -rf pkg/*
           cd public
