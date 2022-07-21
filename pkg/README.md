@@ -3,10 +3,7 @@ This is web port of the emulator.
 Build and run with
 ```
 wasm-pack build --release --target web
-cp index.html pkg/
-cp script.js pkg/
-cd pkg
-python ../server.py
+python server.py
 ```
 Then go to http://localhost:8080/index.html
 
