@@ -1,0 +1,12 @@
+{
+  "name": "nesty-web",
+  "version": "0.1.0",
+  "files": [
+    "nesty_web_bg.wasm",
+    "nesty_web.js",
+    "nesty_web.d.ts"
+  ],
+  "module": "nesty_web.js",
+  "types": "nesty_web.d.ts",
+  "sideEffects": false
+}
