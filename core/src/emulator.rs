@@ -8,7 +8,7 @@ use crate::cartridge::Cartridge;
 use crate::bus::Bus;
 use crate::joypad::Joypad;
 
-const CYCLES_PER_FRAME: u64 = 29781; // how many CPU cycles required to render one frame
+pub const CYCLES_PER_FRAME: u64 = 29781; // how many CPU cycles required to render one frame
 
 pub struct Emulator {
     cart: Rc<RefCell<Cartridge>>,
@@ -22,8 +22,8 @@ pub struct Emulator {
 }
 
 impl Emulator {
-    pub fn new(fname: &str) -> Self {
-        let cart_ref = Rc::new(RefCell::new(Cartridge::new(fname)));
+    pub fn new(rom: Vec<u8>) -> Self {
+        let cart_ref = Rc::new(RefCell::new(Cartridge::new(rom)));
         let weak_cart = Rc::downgrade(&cart_ref);
 
         let ppu_ref = Rc::new(RefCell::new(PPU::new(weak_cart.clone())));
@@ -55,6 +55,7 @@ impl Emulator {
             ppu: ppu_ref,
             dma: dma_ref,
             joypad: joypad_ref,
+
             prev_total_cycles: 0
         }
     }
@@ -89,40 +90,44 @@ impl Emulator {
         self.ppu().reset();
     }
 
+    pub fn tick(&mut self) -> u64 {
+        if self.ppu().nmi {
+            self.cpu().nmi();
+            self.ppu().nmi = false;
+        }
+
+        // TODO IRQ here
+
+        if self.dma().active {
+            // cpu is stalled during dma transfer
+            self.dma().do_transfer();
+        } else {
+            self.cpu().tick();
+
+            if self.bus().init_dma {
+                self.dma().init_transfer(self.bus().dma_start_addr);
+                self.bus().init_dma = false;
+            }
+        }
+
+        let total_cycles = self.cpu().total_cycles;
+        let cycles = total_cycles - self.prev_total_cycles;
+        self.prev_total_cycles = total_cycles;
+
+        for _i in 0..cycles {
+            self.ppu().tick();
+            self.ppu().tick();
+            self.ppu().tick();
+        }
+
+        cycles
+    }
+
     pub fn update(&mut self) {
         let mut total: u64 = 0;
 
         while total < CYCLES_PER_FRAME {
-            if self.ppu().nmi {
-                self.cpu().nmi();
-                self.ppu().nmi = false;
-            }
-
-            // TODO IRQ here
-
-            if self.dma().active {
-                // cpu is stalled during dma transfer
-                self.dma().do_transfer();
-            } else {
-                self.cpu().tick();
-
-                if self.bus().init_dma {
-                    self.dma().init_transfer(self.bus().dma_start_addr);
-                    self.bus().init_dma = false;
-                }
-            }
-
-            let total_cycles = self.cpu().total_cycles;
-            let cycles = total_cycles - self.prev_total_cycles;
-            self.prev_total_cycles = total_cycles;
-
-            for _i in 0..cycles {
-                self.ppu().tick();
-                self.ppu().tick();
-                self.ppu().tick();
-            }
-
-            total += cycles;
+            total += self.tick();
         }
     }
 }

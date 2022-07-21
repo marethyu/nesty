@@ -1,3 +1,4 @@
+use std::fs;
 use std::env;
 use std::process;
 use std::thread;
@@ -8,7 +9,7 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
 
-use core::emulator::Emulator;
+use core::emulator::*;
 use core::ppu;
 use core::joypad;
 
@@ -22,7 +23,8 @@ pub fn main() {
         process::exit(1);
     }
 
-    let mut nes = Emulator::new(&args[1]);
+    let rom = fs::read(&args[1]).unwrap();
+    let mut nes = Emulator::new(rom);
 
     nes.reset();
 

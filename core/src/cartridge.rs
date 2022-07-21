@@ -1,5 +1,3 @@
-use std::fs;
-
 use crate::io::IO;
 use crate::mapper::{Mirroring, Mapper, PRG_ROM_BANK_SIZE, CHR_ROM_BANK_SIZE};
 
@@ -18,9 +16,7 @@ pub struct Cartridge {
 }
 
 impl Cartridge {
-    pub fn new(fname: &str) -> Self {
-        let rom = fs::read(fname).unwrap();
-
+    pub fn new(rom: Vec<u8>) -> Self {
         if &rom[0..4] != INES_IDENT {
             panic!("File is not in iNES file format");
         }

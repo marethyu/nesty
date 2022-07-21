@@ -17,5 +17,6 @@ TODO:
 - Run test ROMs
 - More mappers
 - Savestates and maybe rewind
-- Port to web using emscripten
+- Improve webpage design
+- imgui+wgpu for debugger frontend
 - Nametable previews

@@ -1,3 +1,5 @@
+mod utils;
+
 use js_sys::Uint8Array;
 use wasm_bindgen::prelude::*;
 
@@ -5,40 +7,62 @@ use core::emulator::Emulator;
 
 #[wasm_bindgen]
 pub struct Nesty {
-    emu: Emulator
+    emu: Option<Emulator>
 }
 
 #[wasm_bindgen]
 impl Nesty {
-    pub fn new(fname: &str) -> Self {
+    pub fn new() -> Self {
         Nesty {
-            emu: Emulator::new(fname)
+            emu: None
         }
     }
 
+    pub fn load_rom(&mut self, rom_data: Uint8Array) {
+        self.emu = Some(Emulator::new(rom_data.to_vec()));
+    }
+
     pub fn reset(&mut self) {
-        self.emu.reset();
+        if let Some(ref mut emu) = self.emu {
+            emu.reset();
+        } else {
+            println!("Nesty is not initialized!");
+        }
     }
 
     pub fn update(&mut self) {
-        self.emu.update();
+        utils::set_panic_hook();
+
+        if let Some(ref mut emu) = self.emu {
+            emu.update();
+        } else {
+            println!("Nesty is not initialized!");
+        }
     }
 
     pub fn pixel_buffer(&self) -> Uint8Array {
-        let pixels: &[u8] = &self.emu.ppu().pixels;
-        Uint8Array::from(pixels)
+        if let Some(ref emu) = self.emu {
+            let pixels: &[u8] = &emu.ppu().pixels;
+            return Uint8Array::from(pixels)
+        } else {
+            println!("Nesty is not initialized!");
+            return Uint8Array::new_with_length(0);
+        }
     }
 
     pub fn press_key(&mut self, key: u8) {
-        self.emu.joypad().press(key);
+        if let Some(ref emu) = self.emu {
+            emu.joypad().press(key);
+        } else {
+            println!("Nesty is not initialized!");
+        }
     }
 
     pub fn release_key(&mut self, key: u8) {
-        self.emu.joypad().release(key);
+        if let Some(ref emu) = self.emu {
+            emu.joypad().release(key);
+        } else {
+            println!("Nesty is not initialized!");
+        }
     }
-}
-
-#[wasm_bindgen]
-pub fn add(a: u32, b: u32) -> u32 {
-    a + b
 }
