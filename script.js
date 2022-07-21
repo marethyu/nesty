@@ -73,7 +73,6 @@ function openROM(e) {
 }
 
 function openROM2(romPath) {
-    var result = null;
     var xhr = new XMLHttpRequest();
 
     xhr.open("GET", romPath, true);
