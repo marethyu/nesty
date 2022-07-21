@@ -47,6 +47,7 @@ function renderLoop() {
 }
 
 /* Main logic happens here */
+console.log("Test");
 requestAnimationFrame(renderLoop);
 
 function openROM(e) {
