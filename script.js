@@ -1,6 +1,6 @@
 import { Nesty, default as init } from './pkg/nesty_web.js';
 
-/* Initialize wasm first */
+// Initialize wasm first
 await init('./pkg/nesty_web_bg.wasm');
 
 const SCREEN_WIDTH = 256;
@@ -47,7 +47,7 @@ function renderLoop() {
     requestAnimationFrame(renderLoop);
 }
 
-/* Main logic happens here */
+// Main logic happens here
 requestAnimationFrame(renderLoop);
 
 function loadROM(rom) {
