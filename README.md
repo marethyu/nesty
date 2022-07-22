@@ -36,5 +36,6 @@ TODO:
 - More mappers
 - Savestates and maybe rewind
 - Improve webpage design
-- imgui+wgpu for debugger frontend
+- imgui+wgpu for debugger frontend (might need to implement message queues using [std::sync::mpsc](https://doc.rust-lang.org/std/sync/mpsc/))
 - Nametable previews
+- SNES emulation support
