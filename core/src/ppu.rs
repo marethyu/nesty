@@ -583,21 +583,19 @@ impl PPU {
                     let ypos = self.scanline as usize;
 
                     let offset = ypos * WIDTH * 3 + xpos * 3;
-                    let lets_draw;
+                    let mut lets_draw = false;
 
                     // For each pixel in the background buffer, the corresponding sprite pixel replaces it
                     // only if the sprite pixel is opaque and front priority or if the background pixel is transparent.
-                    if self.transparent[ypos * WIDTH + xpos] {
-                        lets_draw = true;
-                    } else { // else if the background pixel is opaque
-                        let opaque = colour_idx > 0;
+                    if colour_idx > 0 {
+                        let bg_transparent = self.transparent[ypos * WIDTH + xpos];
 
-                        if opaque && i == 0 && !self.status.sprite_zero_hit() {
+                        if !bg_transparent && i == 0 && !self.status.sprite_zero_hit() {
                             // This flag is set as soon as an opaque pixel of the sprite at OAM index 0 intersects an opaque background pixel.
                             self.status.set_sprite_zero_hit(true);
                         }
 
-                        lets_draw = opaque && !test_bit!(attr, 5); // only draw if sprites have front priority
+                        lets_draw = !test_bit!(attr, 5) || bg_transparent;
                     }
 
                     if lets_draw {
