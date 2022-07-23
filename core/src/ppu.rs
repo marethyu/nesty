@@ -245,16 +245,16 @@ impl PPU {
                     self.cycle += 1; // skip if odd
                 }
 
-                if self.scanline >= 0 && self.cycle % 8 == 0 && self.cycle <= 256 {
+                if self.cycle % 8 == 0 && self.cycle <= 256 {
                     self.inc_scrollx();
                 }
 
-                if self.scanline >= 0 && self.cycle == 256 {
+                if self.cycle == 256 {
                     // TODO is it necessary?
                     // self.inc_scrolly();
                 }
 
-                if self.scanline >= 0 && self.cycle == 257 {
+                if self.cycle == 257 {
                     // Horizontal update
                     // v: ....A.. ...BCDEF <- t: ....A.. ...BCDEF
                     if self.rendering_on() {
@@ -267,7 +267,7 @@ impl PPU {
                     self.render_scanline();
                 }
 
-                if self.scanline >= 0 && (self.cycle == 328 || self.cycle == 336) {
+                if self.cycle == 328 || self.cycle == 336 {
                     self.inc_scrollx();
                 }
             }
