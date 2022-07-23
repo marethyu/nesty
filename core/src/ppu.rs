@@ -250,12 +250,8 @@ impl PPU {
                 }
 
                 if self.cycle == 256 {
-                    // TODO is it necessary?
-                    // self.inc_scrolly();
-                }
-
-                if self.cycle == 257 {
                     // Horizontal update
+                    // it is supposed to happen at cycle 257 but since we are using scanline-based renderer...
                     // v: ....A.. ...BCDEF <- t: ....A.. ...BCDEF
                     if self.rendering_on() {
                         self.vram_address.set_coarse_x(self.temp_vram_address.coarse_x());
@@ -263,8 +259,12 @@ impl PPU {
                     }
                 }
 
-                if self.scanline >= 0 && self.cycle == 258 {
+                if self.scanline >= 0 && self.cycle == 256 {
                     self.render_scanline();
+                }
+
+                if self.cycle == 256 {
+                    self.inc_scrolly();
                 }
 
                 if self.cycle == 328 || self.cycle == 336 {
@@ -315,20 +315,10 @@ impl PPU {
         let scrollx = self.vram_address.coarse_x() * 8 + self.fine_x;
         let scrolly = self.vram_address.coarse_y() * 8 + self.vram_address.fine_y();
 
-        let mut actual_screen_y = (self.scanline as usize) + (scrolly as usize);
+        let screen_y = scrolly as usize;
 
-        // Yuh oh... we need to fix base addresses
-        if actual_screen_y >= HEIGHT {
-            actual_screen_y -= HEIGHT;
-
-            // addresses follows this format: ....NN..........
-            // toggling bit 11 will change nametable y
-            toggle_bit!(base_nt_addr, 11);
-            toggle_bit!(base_attr_addr, 11);
-        }
-
-        let ty = (actual_screen_y as u16) / 8; // which tile?
-        let y = (actual_screen_y as u16) % 8; // which row?
+        let ty = (screen_y as u16) / 8; // which tile?
+        let y = (screen_y as u16) % 8; // which row?
 
         let pattstart = if self.control.bkgd_pattern() { PT1_START } else { PT0_START };
 

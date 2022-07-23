@@ -32,9 +32,8 @@ Keybindings:
 TODO:
 
 - Fix some PPU bugs
-  * Scrolling in Legend of Zelda has some issues (horizontal scrolling is fine but vertical scrolling is not)
 - Run test ROMs
-- More mappers
+- More mappers, esp MMC3
 - Savestates and maybe rewind
 - Improve webpage design
 - imgui+wgpu for debugger frontend (might need to implement message queues using [std::sync::mpsc](https://doc.rust-lang.org/std/sync/mpsc/))
