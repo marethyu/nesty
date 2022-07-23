@@ -785,9 +785,37 @@ impl IO for PPU {
         match addr {
             0x0000..=0x1FFF => self.cart().borrow_mut().read_byte(addr),
             0x2000..=0x3EFF => {
-                let nt_idx = mirror!(0x2000, addr, NAMETABLE_SIZE * 4) / NAMETABLE_SIZE;
+                let a = mirror!(0x2000, addr, NAMETABLE_SIZE * 4);
                 let nt_addr = mirror!(0x2000, addr, NAMETABLE_SIZE);
-                self.nametable[nt_idx][nt_addr]
+
+                match self.cart().borrow().mirroring() {
+                    /* $2000 equals $2800 and $2400 equals $2C00
+                            +---+---+
+                            | A | B |
+                            +---+---+
+                            | A | B |
+                            +---+---+                        */
+                    Mirroring::Vertical => {
+                        if (a >= 0x000 && a < 0x400) || (a >= 0x800 && a < 0xC00) {
+                            return self.nametable[0][nt_addr];
+                        } else {
+                            return self.nametable[1][nt_addr];
+                        }
+                    }
+                    /* $2000 equals $2400 and $2800 equals $2C00
+                            +---+---+
+                            | A | A |
+                            +---+---+
+                            | B | B |
+                            +---+---+                        */
+                    Mirroring::Horizontial => {
+                        if a >= 0x000 && a < 0x800 {
+                            return self.nametable[0][nt_addr];
+                        } else {
+                            return self.nametable[1][nt_addr];
+                        }
+                    }
+                }
             }
             0x3F00..=0x3FFF => {
                 let addr = mirror!(0x3F00, addr, PALETTE_RAM_SIZE);
@@ -828,10 +856,8 @@ impl IO for PPU {
                     Mirroring::Vertical => {
                         if (a >= 0x000 && a < 0x400) || (a >= 0x800 && a < 0xC00) {
                             self.nametable[0][nt_addr] = data;
-                            self.nametable[2][nt_addr] = data;
                         } else {
                             self.nametable[1][nt_addr] = data;
-                            self.nametable[3][nt_addr] = data;
                         }
                     }
                     /* $2000 equals $2400 and $2800 equals $2C00
@@ -843,10 +869,8 @@ impl IO for PPU {
                     Mirroring::Horizontial => {
                         if a >= 0x000 && a < 0x800 {
                             self.nametable[0][nt_addr] = data;
-                            self.nametable[1][nt_addr] = data;
                         } else {
-                            self.nametable[2][nt_addr] = data;
-                            self.nametable[3][nt_addr] = data;
+                            self.nametable[1][nt_addr] = data;
                         }
                     }
                 }
