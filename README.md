@@ -32,6 +32,7 @@ Keybindings:
 TODO:
 
 - Fix some PPU bugs
+  * Scrolling in Legend of Zelda has some issues (maybe nametable mirroring is not implemented correctly? idk)
 - Run test ROMs
 - More mappers
 - Savestates and maybe rewind
