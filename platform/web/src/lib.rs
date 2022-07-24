@@ -3,7 +3,7 @@ mod utils;
 use js_sys::Uint8Array;
 use wasm_bindgen::prelude::*;
 
-use core::emulator::Emulator;
+use nesty::emulator::Emulator;
 
 #[wasm_bindgen]
 pub struct Nesty {

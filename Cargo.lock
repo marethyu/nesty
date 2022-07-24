@@ -37,13 +37,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "core"
-version = "0.1.0"
-dependencies = [
- "proc-bitfield",
-]
-
-[[package]]
 name = "js-sys"
 version = "0.3.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -74,10 +67,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "nesty"
+version = "0.1.0"
+dependencies = [
+ "proc-bitfield",
+]
+
+[[package]]
 name = "nesty-desktop-sdl2"
 version = "0.1.0"
 dependencies = [
- "core",
+ "nesty",
  "sdl2",
 ]
 
@@ -87,8 +87,8 @@ version = "0.1.0"
 dependencies = [
  "cfg-if 0.1.10",
  "console_error_panic_hook",
- "core",
  "js-sys",
+ "nesty",
  "wasm-bindgen",
 ]
 

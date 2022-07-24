@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "core",
+    "nesty",
     "platform/desktop-sdl2",
     "platform/web"
 ]

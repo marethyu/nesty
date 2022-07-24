@@ -9,9 +9,8 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
 
-use core::emulator::*;
-use core::ppu;
-use core::joypad;
+use nesty::emulator::*;
+use nesty::{ppu, joypad};
 
 const DELAY: u32 = 17; // 1000ms / 59.7fps
 
