@@ -1,5 +1,10 @@
-use crate::mapper::{Mirroring, Mapper, SRAM_SIZE};
+use std::io::Cursor;
 
+use byteorder::{ReadBytesExt, WriteBytesExt};
+
+use crate::mapper::{Mirroring, Mapper, MapperBase, SRAM_SIZE};
+
+use crate::savable::Savable;
 use crate::{mirror, box_array};
 
 pub struct Mapper0 {
@@ -25,7 +30,7 @@ impl Mapper0 {
     }
 }
 
-impl Mapper for Mapper0 {
+impl MapperBase for Mapper0 {
     fn reset(&mut self) {}
 
     fn cpu_read_byte(&self, addr: u16) -> u8 {
@@ -64,3 +69,19 @@ impl Mapper for Mapper0 {
         return self.mirroring_type;
     }
 }
+
+impl Savable for Mapper0 {
+    fn save_state(&self, state: &mut Vec<u8>) {
+        for i in 0..SRAM_SIZE {
+            state.write_u8(self.sram[i]).expect("Unable to save u8");
+        }
+    }
+
+    fn load_state(&mut self, state: &mut Cursor<Vec<u8>>) {
+        for i in 0..SRAM_SIZE {
+            self.sram[i] = state.read_u8().expect("Unable to load u8");
+        }
+    }
+}
+
+impl Mapper for Mapper0 {}

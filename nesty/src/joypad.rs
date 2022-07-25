@@ -1,3 +1,8 @@
+use std::io::Cursor;
+
+use byteorder::{ReadBytesExt, WriteBytesExt};
+
+use crate::savable::Savable;
 use crate::{test_bit, modify_bit};
 
 pub const BUTTON_A: u8      = 0;
@@ -59,5 +64,19 @@ impl Joypad {
 
     pub fn release(&mut self, button: u8) {
         modify_bit!(self.state, button, false);
+    }
+}
+
+impl Savable for Joypad {
+    fn save_state(&self, state: &mut Vec<u8>) {
+        state.write_u8(self.state).expect("Unable to save u8");
+        state.write_u8(self.button_index).expect("Unable to save u8");
+        state.write_u8(self.strobe as u8).expect("Unable to save u8");
+    }
+
+    fn load_state(&mut self, state: &mut Cursor<Vec<u8>>) {
+        self.state = state.read_u8().expect("Unable to load u8");
+        self.button_index = state.read_u8().expect("Unable to load u8");
+        self.strobe = state.read_u8().expect("Unable to load u8") != 0;
     }
 }

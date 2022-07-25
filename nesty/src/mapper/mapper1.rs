@@ -1,5 +1,10 @@
-use crate::mapper::{Mirroring, Mapper, SRAM_SIZE};
+use std::io::Cursor;
 
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+
+use crate::mapper::{Mirroring, Mapper, MapperBase, SRAM_SIZE};
+
+use crate::savable::Savable;
 use crate::{test_bit, modify_bit, mirror, box_array};
 
 pub struct Mapper1 {
@@ -139,7 +144,7 @@ impl Mapper1 {
 }
 
 /* https://www.nesdev.org/wiki/MMC1 */
-impl Mapper for Mapper1 {
+impl MapperBase for Mapper1 {
     fn reset(&mut self) {
         self.shift_register = 0;
         self.control_register = 0x1C;
@@ -249,3 +254,77 @@ impl Mapper for Mapper1 {
         return self.mirroring_type;
     }
 }
+
+impl Savable for Mapper1 {
+    fn save_state(&self, state: &mut Vec<u8>) {
+        match self.mirroring_type {
+            Mirroring::Vertical => {
+                state.write_u8(0).expect("Unable to save u8");
+            }
+            Mirroring::Horizontial => {
+                state.write_u8(1).expect("Unable to save u8");
+            }
+        }
+
+        let use_chr_ram = self.chr_rom_banks == 0;
+
+        state.write_u8(use_chr_ram as u8).expect("Unable to save u8");
+        if use_chr_ram {
+            for i in 0..self.chr_rom.len() {
+                state.write_u8(self.chr_rom[i]).expect("Unable to save u8");
+            }
+        }
+
+        for i in 0..SRAM_SIZE {
+            state.write_u8(self.sram[i]).expect("Unable to save u8");
+        }
+
+        state.write_u8(self.shift_register).expect("Unable to save u8");
+        state.write_u8(self.control_register).expect("Unable to save u8");
+
+        state.write_u32::<LittleEndian>(self.chr_bank_select_lo as u32).expect("Unable to save u32");
+        state.write_u32::<LittleEndian>(self.chr_bank_select_hi as u32).expect("Unable to save u32");
+        state.write_u32::<LittleEndian>(self.chr_bank_select as u32).expect("Unable to save u32");
+
+        state.write_u32::<LittleEndian>(self.prg_bank_select_lo as u32).expect("Unable to save u32");
+        state.write_u32::<LittleEndian>(self.prg_bank_select_hi as u32).expect("Unable to save u32");
+        state.write_u32::<LittleEndian>(self.prg_bank_select as u32).expect("Unable to save u32");
+    }
+
+    fn load_state(&mut self, state: &mut Cursor<Vec<u8>>) {
+        let mirroring = state.read_u8().expect("Unable to load u8");
+        match mirroring {
+            0 => {
+                self.mirroring_type = Mirroring::Vertical;
+            }
+            1 => {
+                self.mirroring_type = Mirroring::Horizontial;
+            }
+            _ => panic!("Unknown byte when reading mirroring configuration: {}", mirroring)
+        }
+
+        let use_chr_ram = state.read_u8().expect("Unable to load u8") != 0;
+        if use_chr_ram {
+            for i in 0..self.chr_rom.len() {
+                self.chr_rom[i] = state.read_u8().expect("Unable to load u8");
+            }
+        }
+
+        for i in 0..SRAM_SIZE {
+            self.sram[i] = state.read_u8().expect("Unable to load u8");
+        }
+
+        self.shift_register = state.read_u8().expect("Unable to load u8");
+        self.control_register = state.read_u8().expect("Unable to load u8");
+
+        self.chr_bank_select_lo = state.read_u32::<LittleEndian>().expect("Unable to load u32") as usize;
+        self.chr_bank_select_hi = state.read_u32::<LittleEndian>().expect("Unable to load u32") as usize;
+        self.chr_bank_select = state.read_u32::<LittleEndian>().expect("Unable to load u32") as usize;
+
+        self.prg_bank_select_lo = state.read_u32::<LittleEndian>().expect("Unable to load u32") as usize;
+        self.prg_bank_select_hi = state.read_u32::<LittleEndian>().expect("Unable to load u32") as usize;
+        self.prg_bank_select = state.read_u32::<LittleEndian>().expect("Unable to load u32") as usize;
+    }
+}
+
+impl Mapper for Mapper1 {}

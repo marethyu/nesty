@@ -1,5 +1,8 @@
 use std::cell::{RefCell, RefMut};
 use std::rc::Rc;
+use std::io::Cursor;
+
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::m6502::M6502;
 use crate::ppu::PPU;
@@ -7,6 +10,8 @@ use crate::dma::DMA;
 use crate::cartridge::Cartridge;
 use crate::bus::Bus;
 use crate::joypad::Joypad;
+
+use crate::savable::Savable;
 
 pub const CYCLES_PER_FRAME: u64 = 29781; // how many CPU cycles required to render one frame
 
@@ -84,6 +89,10 @@ impl Emulator {
         self.joypad.borrow_mut()
     }
 
+    pub fn load_rom(&mut self, rom: Vec<u8>) -> Result<String, String> {
+        return self.cart().load(rom);
+    }
+
     pub fn reset(&mut self) {
         self.cart().reset();
         self.cpu().reset();
@@ -129,5 +138,25 @@ impl Emulator {
         while total < CYCLES_PER_FRAME {
             total += self.tick();
         }
+    }
+}
+
+impl Savable for Emulator {
+    fn save_state(&self, state: &mut Vec<u8>) {
+        self.cart().save_state(state);
+        self.bus().save_state(state);
+        self.cpu().save_state(state);
+        self.ppu().save_state(state);
+        self.joypad().save_state(state);
+        state.write_u64::<LittleEndian>(self.prev_total_cycles).expect("Unable to save u64");
+    }
+
+    fn load_state(&mut self, state: &mut Cursor<Vec<u8>>) {
+        self.cart().load_state(state);
+        self.bus().load_state(state);
+        self.cpu().load_state(state);
+        self.ppu().load_state(state);
+        self.joypad().load_state(state);
+        self.prev_total_cycles = state.read_u64::<LittleEndian>().expect("Unable to load u64");
     }
 }

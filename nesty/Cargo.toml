@@ -7,3 +7,4 @@ edition = "2018"
 
 [dependencies]
 proc-bitfield = "0.0.2"
+byteorder = "1.4.3"

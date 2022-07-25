@@ -1,5 +1,6 @@
 /target
 /roms/*
+nesty.sav
 
 !/roms/nestest.log
 !/roms/nestest.nes

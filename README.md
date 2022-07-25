@@ -33,9 +33,13 @@ TODO:
 
 - Fix some PPU bugs
 - Run test ROMs
+  * Pass ppuio cpu exec space test by implementing dummy reads
 - More mappers, esp MMC3
-- Savestates and maybe rewind
-- Improve webpage design
+- Rewind
+- Default .nes rom that display a static image with caption "Welcome to Nesty! Press i to load ROM." and hardcode it in the program
+- Better error handling for web
+- Improve webpage design - try NES.css
+- native windows gui kit
 - imgui+wgpu for debugger frontend (might need to implement message queues using [std::sync::mpsc](https://doc.rust-lang.org/std/sync/mpsc/))
 - Nametable previews
 - SNES emulation support

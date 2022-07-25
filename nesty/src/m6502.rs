@@ -1,9 +1,13 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
+use std::io::Cursor;
+
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::bus::Bus;
 
 use crate::io::IO;
+use crate::savable::Savable;
 
 #[macro_export]
 macro_rules! test_bit {
@@ -669,5 +673,27 @@ impl M6502 {
     fn cpu_read_byte(&mut self, addr: u16) -> u8 {
         self.total_cycles += 1;
         self.bus().borrow_mut().read_byte(addr)
+    }
+}
+
+impl Savable for M6502 {
+    fn save_state(&self, state: &mut Vec<u8>) {
+        state.write_u8(self.a).expect("Unable to save u8");
+        state.write_u8(self.x).expect("Unable to save u8");
+        state.write_u8(self.y).expect("Unable to save u8");
+        state.write_u8(self.p).expect("Unable to save u8");
+        state.write_u8(self.sp).expect("Unable to save u8");
+        state.write_u16::<LittleEndian>(self.pc).expect("Unable to save u16");
+        state.write_u64::<LittleEndian>(self.total_cycles).expect("Unable to save u64");
+    }
+
+    fn load_state(&mut self, state: &mut Cursor<Vec<u8>>) {
+        self.a = state.read_u8().expect("Unable to load u8");
+        self.x = state.read_u8().expect("Unable to load u8");
+        self.y = state.read_u8().expect("Unable to load u8");
+        self.p = state.read_u8().expect("Unable to load u8");
+        self.sp = state.read_u8().expect("Unable to load u8");
+        self.pc = state.read_u16::<LittleEndian>().expect("Unable to load u16");
+        self.total_cycles = state.read_u64::<LittleEndian>().expect("Unable to load u64");
     }
 }

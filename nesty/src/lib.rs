@@ -5,6 +5,7 @@ mod mapper;
 mod io;
 mod dma;
 
+pub mod savable;
 pub mod cartridge;
 pub mod m6502;
 pub mod bus;

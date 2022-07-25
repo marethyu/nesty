@@ -1,9 +1,13 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
+use std::io::Cursor;
+
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::cartridge::Cartridge;
 use crate::mapper::Mirroring;
 use crate::io::IO;
+use crate::savable::Savable;
 
 use crate::{test_bit, modify_bit, mirror, box_array};
 
@@ -882,5 +886,71 @@ impl IO for PPU {
     fn write_word(&mut self, addr: u16, data: u16) {
         self.write_byte(addr, (data & 0xFF) as u8);
         self.write_byte(addr + 1, (data >> 8) as u8);
+    }
+}
+
+impl Savable for PPU {
+    fn save_state(&self, state: &mut Vec<u8>) {
+        for nt in 0..4 {
+            for i in 0..NAMETABLE_SIZE {
+                state.write_u8(self.nametable[nt][i]).expect("Unable to save u8");
+            }
+        }
+        for i in 0..PALETTE_RAM_SIZE {
+            state.write_u8(self.palette_ram[i]).expect("Unable to save u8");
+        }
+
+        state.write_u8(self.control.raw()).expect("Unable to save u8");
+        state.write_u8(self.mask.raw()).expect("Unable to save u8");
+        state.write_u8(self.status.raw()).expect("Unable to save u8");
+
+        state.write_u8(self.oam_addr).expect("Unable to save u8");
+        state.write_u8(self.prev_data).expect("Unable to save u8");
+        for i in 0..OAM_SIZE {
+            state.write_u8(self.oam[i]).expect("Unable to save u8");
+        }
+
+        state.write_u16::<LittleEndian>(self.vram_address.raw()).expect("Unable to save u16");
+        state.write_u16::<LittleEndian>(self.temp_vram_address.raw()).expect("Unable to save u16");
+        state.write_u8(self.fine_x).expect("Unable to save u8");
+        state.write_u8(self.addr_latch as u8).expect("Unable to save u8");
+
+        state.write_i32::<LittleEndian>(self.scanline).expect("Unable to save i32");
+        state.write_u32::<LittleEndian>(self.cycle).expect("Unable to save u32");
+        state.write_u8(self.odd_frame as u8).expect("Unable to save u8");
+
+        state.write_u8(self.nmi as u8).expect("Unable to save u8");
+    }
+
+    fn load_state(&mut self, state: &mut Cursor<Vec<u8>>) {
+        for nt in 0..4 {
+            for i in 0..NAMETABLE_SIZE {
+                self.nametable[nt][i] = state.read_u8().expect("Unable to load u8");
+            }
+        }
+        for i in 0..PALETTE_RAM_SIZE {
+            self.palette_ram[i] = state.read_u8().expect("Unable to load u8");
+        }
+
+        self.control.set_raw(state.read_u8().expect("Unable to load u8"));
+        self.mask.set_raw(state.read_u8().expect("Unable to load u8"));
+        self.status.set_raw(state.read_u8().expect("Unable to load u8"));
+
+        self.oam_addr = state.read_u8().expect("Unable to load u8");
+        self.prev_data = state.read_u8().expect("Unable to load u8");
+        for i in 0..OAM_SIZE {
+            self.oam[i] = state.read_u8().expect("Unable to load u8");
+        }
+
+        self.vram_address.set_raw(state.read_u16::<LittleEndian>().expect("Unable to load u16"));
+        self.temp_vram_address.set_raw(state.read_u16::<LittleEndian>().expect("Unable to load u16"));
+        self.fine_x = state.read_u8().expect("Unable to load u8");
+        self.addr_latch = state.read_u8().expect("Unable to load u8") != 0;
+
+        self.scanline = state.read_i32::<LittleEndian>().expect("Unable to load i32");
+        self.cycle = state.read_u32::<LittleEndian>().expect("Unable to load u32");
+        self.odd_frame = state.read_u8().expect("Unable to load u8") != 0;
+
+        self.nmi = state.read_u8().expect("Unable to load u8") != 0;
     }
 }

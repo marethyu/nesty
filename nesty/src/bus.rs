@@ -1,11 +1,15 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
+use std::io::Cursor;
+
+use byteorder::{ReadBytesExt, WriteBytesExt};
 
 use crate::ppu::PPU;
 use crate::cartridge::Cartridge;
 use crate::joypad::Joypad;
 
 use crate::io::IO;
+use crate::savable::Savable;
 
 #[macro_export]
 macro_rules! mirror {
@@ -141,5 +145,25 @@ impl IO for Bus {
     fn write_word(&mut self, addr: u16, data: u16) {
         self.write_byte(addr, (data & 0xFF) as u8);
         self.write_byte(addr + 1, (data >> 8) as u8);
+    }
+}
+
+impl Savable for Bus {
+    fn save_state(&self, state: &mut Vec<u8>) {
+        for i in 0..RAM_SIZE {
+            state.write_u8(self.ram[i]).expect("Unable to save u8");
+        }
+        for i in 0..IO_REGS_COUNT {
+            state.write_u8(self.io_regs[i]).expect("Unable to save u8");
+        }
+    }
+
+    fn load_state(&mut self, state: &mut Cursor<Vec<u8>>) {
+        for i in 0..RAM_SIZE {
+            self.ram[i] = state.read_u8().expect("Unable to load u8");
+        }
+        for i in 0..IO_REGS_COUNT {
+            self.io_regs[i] = state.read_u8().expect("Unable to load u8");
+        }
     }
 }

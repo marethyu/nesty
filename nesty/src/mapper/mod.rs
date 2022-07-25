@@ -1,3 +1,5 @@
+use crate::savable::Savable;
+
 pub mod mapper0;
 pub mod mapper1;
 
@@ -12,7 +14,7 @@ pub enum Mirroring {
     Horizontial
 }
 
-pub trait Mapper {
+pub trait MapperBase {
     fn reset(&mut self);
     fn cpu_read_byte(&self, addr: u16) -> u8;
     fn cpu_write_byte(&mut self, addr: u16, data: u8);
@@ -20,3 +22,5 @@ pub trait Mapper {
     fn ppu_write_byte(&mut self, addr: u16, data: u8);
     fn mirroring(&self) -> Mirroring;
 }
+
+pub trait Mapper: MapperBase + Savable {}
