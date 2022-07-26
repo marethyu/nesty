@@ -51,7 +51,7 @@ function loadROM(rom) {
     if (nesty.load_rom(rom)) {
         nesty.reset();
     } else {
-        alert("This cartridge is not supported yet bro");
+        alert("This cartridge's mapper is not supported yet bro");
     }
 }
 
