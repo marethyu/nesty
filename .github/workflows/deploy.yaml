@@ -31,7 +31,8 @@ jobs:
           rm -f pkg/.gitignore
           mkdir public
           cp -R ./pkg/ ./public/
-          cp -t ./public ../../roms/nestest.nes ../../roms/Super_Mario_Forever_Clean_Patch.nes
+          mkdir ./public/roms
+          cp -t ./public/roms ../../roms/nestest.nes ../../roms/Super_Mario_Forever_Clean_Patch.nes
           cp -t ./public index.html style.css script.js
           rm -rf pkg/*
           cd public
