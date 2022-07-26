@@ -84,6 +84,11 @@ impl Bus {
     pub fn joypad(&self) -> Rc<RefCell<Joypad>> {
         self.joypad.upgrade().expect("Joypad lost for bus")
     }
+
+    pub fn reset(&mut self) {
+        self.ram = box_array![0; RAM_SIZE];
+        self.io_regs = box_array![0; IO_REGS_COUNT];
+    }
 }
 
 /*

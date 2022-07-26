@@ -95,8 +95,10 @@ impl Emulator {
 
     pub fn reset(&mut self) {
         self.cart().reset();
+        self.bus().reset();
         self.cpu().reset();
         self.ppu().reset();
+        self.joypad().reset();
     }
 
     pub fn tick(&mut self) -> u64 {

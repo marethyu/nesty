@@ -29,6 +29,12 @@ impl Joypad {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.state = 0;
+        self.button_index = 0;
+        self.strobe = false;
+    }
+
     pub fn read(&mut self) -> u8 {
         /* strobe bit on - controller reports only status of the button A on every read */
         if self.strobe {
