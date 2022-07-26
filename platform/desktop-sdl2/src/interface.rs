@@ -128,7 +128,7 @@ impl Nesty {
             total += self.nes.tick();
         }
 
-        texture.update(None, &self.nes.ppu().pixels, ppu::WIDTH * 3).unwrap();
+        texture.update(None, &self.nes.ppu().pixels, ppu::WIDTH * 4).unwrap();
     }
 
     pub fn press_key(&mut self, keycode: Keycode) {

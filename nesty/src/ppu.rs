@@ -197,7 +197,7 @@ impl PPU {
 
             transparent: box_array![false; WIDTH * HEIGHT],
 
-            pixels: vec![0; WIDTH * HEIGHT * 3],
+            pixels: vec![0; WIDTH * HEIGHT * 4],
             nmi: false
         }
     }
@@ -412,11 +412,12 @@ impl PPU {
 
             self.transparent[ypos * WIDTH + xpos] = colour_idx == 0;
 
-            let offset = ypos * WIDTH * 3 + xpos * 3;
+            let offset = ypos * WIDTH * 4 + xpos * 4;
 
             self.pixels[offset    ] = rgb.0;
             self.pixels[offset + 1] = rgb.1;
             self.pixels[offset + 2] = rgb.2;
+            self.pixels[offset + 3] = 255;
         }
     }
 
@@ -487,11 +488,12 @@ impl PPU {
 
                         let xpos = (tx * 8 + x) as usize;
                         let ypos = (ty * 8 + y) as usize;
-                        let offset = ypos * WIDTH * 3 + xpos * 3;
+                        let offset = ypos * WIDTH * 4 + xpos * 4;
 
                         self.pixels[offset    ] = rgb.0;
                         self.pixels[offset + 1] = rgb.1;
                         self.pixels[offset + 2] = rgb.2;
+                        self.pixels[offset + 3] = 255;
 
                         lo <<= 1;
                         hi <<= 1;
@@ -579,7 +581,7 @@ impl PPU {
                     let xpos = (spr_x + x) as usize;
                     let ypos = self.scanline as usize;
 
-                    let offset = ypos * WIDTH * 3 + xpos * 3;
+                    let offset = ypos * WIDTH * 4 + xpos * 4;
                     let mut lets_draw = false;
 
                     // For each pixel in the background buffer, the corresponding sprite pixel replaces it
@@ -599,6 +601,7 @@ impl PPU {
                         self.pixels[offset    ] = rgb.0;
                         self.pixels[offset + 1] = rgb.1;
                         self.pixels[offset + 2] = rgb.2;
+                        self.pixels[offset + 3] = 255;
                     }
                 }
             }

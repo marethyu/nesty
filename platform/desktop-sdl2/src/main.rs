@@ -38,7 +38,7 @@ pub fn main() {
     let texture_creator = canvas.texture_creator();
 
     let mut texture = texture_creator
-        .create_texture_streaming(PixelFormatEnum::RGB24, ppu::WIDTH as u32, ppu::HEIGHT as u32)
+        .create_texture_streaming(PixelFormatEnum::ABGR8888, ppu::WIDTH as u32, ppu::HEIGHT as u32)
         .unwrap();
 
     let mut event_pump = sdl_context.event_pump().unwrap();
