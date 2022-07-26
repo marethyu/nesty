@@ -1,4 +1,4 @@
-import { Nesty, default as init } from './pkg/nesty_web.js';
+import { NestyWeb, default as init } from './pkg/nesty_web.js';
 
 // Initialize wasm first
 await init('./pkg/nesty_web_bg.wasm');
@@ -9,9 +9,7 @@ const SCREEN_HEIGHT = 240;
 const display = document.getElementById("display");
 const selector = document.getElementById("samples-select");
 
-const nesty = Nesty.new();
-
-let romLoaded = false;
+const nesty = NestyWeb.new();
 
 function render() {
     const canvas = document.createElement("canvas");
@@ -39,22 +37,22 @@ function render() {
 }
 
 function renderLoop() {
-    if (romLoaded) {
-        nesty.update();
-        render();
-    }
+    nesty.update();
+    render();
 
     requestAnimationFrame(renderLoop);
 }
 
 // Main logic happens here
+nesty.reset();
 requestAnimationFrame(renderLoop);
 
 function loadROM(rom) {
-    nesty.load_rom(rom);
-    nesty.reset();
-
-    romLoaded = true;
+    if (nesty.load_rom(rom)) {
+        nesty.reset();
+    } else {
+        alert("This cartridge is not supported yet bro");
+    }
 }
 
 function openROM(e) {
@@ -96,25 +94,13 @@ function openROM2(romPath) {
 document.getElementById('rom-input').addEventListener('change', openROM, false);
 
 display.addEventListener('keydown', (event) => {
-    if (event.code == "KeyA")       nesty.press_key(0);
-    if (event.code == "KeyS")       nesty.press_key(1);
-    if (event.code == "Space")      nesty.press_key(2);
-    if (event.code == "Enter")      nesty.press_key(3);
-    if (event.code == "ArrowUp")    nesty.press_key(4);
-    if (event.code == "ArrowDown")  nesty.press_key(5);
-    if (event.code == "ArrowLeft")  nesty.press_key(6);
-    if (event.code == "ArrowRight") nesty.press_key(7);
+    if (event.code == "KeyO")       nesty.save_state();
+    else if (event.code == "KeyP")  nesty.load_state();
+    else                            nesty.press_key(event.keyCode);
 }, false);
 
 display.addEventListener('keyup', (event) => {
-    if (event.code == "KeyA")       nesty.release_key(0);
-    if (event.code == "KeyS")       nesty.release_key(1);
-    if (event.code == "Space")      nesty.release_key(2);
-    if (event.code == "Enter")      nesty.release_key(3);
-    if (event.code == "ArrowUp")    nesty.release_key(4);
-    if (event.code == "ArrowDown")  nesty.release_key(5);
-    if (event.code == "ArrowLeft")  nesty.release_key(6);
-    if (event.code == "ArrowRight") nesty.release_key(7);
+    nesty.release_key(event.keyCode);
 }, false);
 
 selector.addEventListener("change", () => {

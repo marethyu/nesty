@@ -13,7 +13,11 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 nesty = { path = "../../nesty" }
+byteorder = "1.4.3"
+lazy_static = "1.4.0"
 wasm-bindgen = "0.2.63"
 js-sys = "0.3.58"
+web-sys = { version = "0.3.59", features=["Storage", "Window", "KeyEvent"] }
+serde_json = "1.0.1"
 cfg-if = "0.1.2"
 console_error_panic_hook = { version = "0.1.1", optional = true }

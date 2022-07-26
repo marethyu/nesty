@@ -29,14 +29,21 @@ Keybindings:
 
 <kbd>Return</kbd> = Start
 
+<kbd>I</kbd> = Open ROM
+
+<kbd>O</kbd> = Save state
+
+<kbd>P</kbd> = Load state
+
 TODO:
 
 - Fix some PPU bugs
 - Run test ROMs
   * Pass ppuio cpu exec space test by implementing dummy reads
 - More mappers, esp MMC3
+- Run length encoding for savestates
 - Rewind
-- Default .nes rom that display a static image with caption "Welcome to Nesty! Press i to load ROM." and hardcode it in the program
+- Add more features to the startup rom like flashing text
 - Better error handling for web
 - Improve webpage design - try NES.css
 - native windows gui kit

@@ -4,6 +4,7 @@ extern crate proc_bitfield;
 mod mapper;
 mod io;
 mod dma;
+mod startup_rom;
 
 pub mod savable;
 pub mod cartridge;

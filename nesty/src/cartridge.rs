@@ -9,6 +9,8 @@ use crate::mapper::{Mirroring, Mapper, PRG_ROM_BANK_SIZE, CHR_ROM_BANK_SIZE};
 use crate::mapper::mapper0::Mapper0;
 use crate::mapper::mapper1::Mapper1;
 
+use crate::startup_rom::STARTUP_ROM;
+
 use crate::{test_bit, box_array};
 
 const INES_IDENT: [u8; 4] = [0x4E, 0x45, 0x53, 0x1A];
@@ -21,8 +23,8 @@ pub struct Cartridge {
 }
 
 impl Cartridge {
-    pub fn new(rom: Vec<u8>) -> Self {
-        let (mapper, _) = Cartridge::parse_metadata(rom);
+    pub fn new() -> Self {
+        let (mapper, _) = Cartridge::parse_metadata(STARTUP_ROM.to_vec());
 
         Cartridge {
             mapper: mapper.unwrap(),

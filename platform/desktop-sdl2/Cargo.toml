@@ -8,5 +8,6 @@ edition = "2018"
 [dependencies]
 nesty = { path = "../../nesty" }
 sdl2 = "0.34.5"
+lazy_static = "1.4.0"
 byteorder = "1.4.3"
 native-dialog = "0.6.3"

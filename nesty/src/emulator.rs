@@ -27,8 +27,8 @@ pub struct Emulator {
 }
 
 impl Emulator {
-    pub fn new(rom: Vec<u8>) -> Self {
-        let cart_ref = Rc::new(RefCell::new(Cartridge::new(rom)));
+    pub fn new() -> Self {
+        let cart_ref = Rc::new(RefCell::new(Cartridge::new()));
         let weak_cart = Rc::downgrade(&cart_ref);
 
         let ppu_ref = Rc::new(RefCell::new(PPU::new(weak_cart.clone())));

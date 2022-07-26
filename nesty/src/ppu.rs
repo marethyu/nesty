@@ -207,6 +207,9 @@ impl PPU {
     }
 
     pub fn reset(&mut self) {
+        self.nametable = [(); 4].map(|_| box_array![0; NAMETABLE_SIZE]);
+        self.palette_ram = box_array![0; PALETTE_RAM_SIZE];
+
         self.control.set_raw(0);
         self.mask.set_raw(0);
         self.status.set_raw(0);
