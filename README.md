@@ -8,7 +8,7 @@ WIP NES emulator
 
 Run:
 ```
-cargo run --release "[ROM FILE].nes"
+cargo run --release --bin nesty-desktop-sdl2
 ```
 
 Keybindings:
