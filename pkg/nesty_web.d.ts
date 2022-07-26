@@ -2,19 +2,26 @@
 /* eslint-disable */
 /**
 */
-export class Nesty {
+export class NestyWeb {
   free(): void;
 /**
-* @returns {Nesty}
+* @returns {NestyWeb}
 */
-  static new(): Nesty;
+  static new(): NestyWeb;
 /**
 * @param {Uint8Array} rom_data
+* @returns {boolean}
 */
-  load_rom(rom_data: Uint8Array): void;
+  load_rom(rom_data: Uint8Array): boolean;
 /**
 */
   reset(): void;
+/**
+*/
+  save_state(): void;
+/**
+*/
+  load_state(): void;
 /**
 */
   update(): void;
@@ -23,30 +30,33 @@ export class Nesty {
 */
   pixel_buffer(): Uint8Array;
 /**
-* @param {number} key
+* @param {number} keycode
 */
-  press_key(key: number): void;
+  press_key(keycode: number): void;
 /**
-* @param {number} key
+* @param {number} keycode
 */
-  release_key(key: number): void;
+  release_key(keycode: number): void;
 }
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
-  readonly __wbg_nesty_free: (a: number) => void;
-  readonly nesty_new: () => number;
-  readonly nesty_load_rom: (a: number, b: number) => void;
-  readonly nesty_reset: (a: number) => void;
-  readonly nesty_update: (a: number) => void;
-  readonly nesty_pixel_buffer: (a: number) => number;
-  readonly nesty_press_key: (a: number, b: number) => void;
-  readonly nesty_release_key: (a: number, b: number) => void;
-  readonly __wbindgen_free: (a: number, b: number) => void;
+  readonly __wbg_nestyweb_free: (a: number) => void;
+  readonly nestyweb_new: () => number;
+  readonly nestyweb_load_rom: (a: number, b: number) => number;
+  readonly nestyweb_reset: (a: number) => void;
+  readonly nestyweb_save_state: (a: number) => void;
+  readonly nestyweb_load_state: (a: number) => void;
+  readonly nestyweb_update: (a: number) => void;
+  readonly nestyweb_pixel_buffer: (a: number) => number;
+  readonly nestyweb_press_key: (a: number, b: number) => void;
+  readonly nestyweb_release_key: (a: number, b: number) => void;
   readonly __wbindgen_malloc: (a: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;
+  readonly __wbindgen_free: (a: number, b: number) => void;
+  readonly __wbindgen_exn_store: (a: number) => void;
 }
 
 /**
