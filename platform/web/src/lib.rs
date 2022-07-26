@@ -58,11 +58,16 @@ impl NestyWeb {
         }
     }
 
-    pub fn load_rom(&mut self, rom_data: Uint8Array) -> bool {
+    pub fn load_rom(&mut self, rom_data: Uint8Array) {
         let result = self.emu.load_rom(rom_data.to_vec());
         match result {
-            Ok(_) => true,
-            _ => false
+            Ok(_) => {
+                self.emu.reset();
+            },
+            Err(err) => {
+                let window = web_sys::window().unwrap();
+                window.alert_with_message(&err);
+            }
         }
     }
 
