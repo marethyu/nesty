@@ -17,14 +17,6 @@ function renderLoop() {
 nesty.reset();
 requestAnimationFrame(renderLoop);
 
-function loadROM(rom) {
-    if (nesty.load_rom(rom)) {
-        nesty.reset();
-    } else {
-        alert("This cartridge's mapper is not supported yet bro");
-    }
-}
-
 function openROM(e) {
     const romFile = e.target.files[0];
     if (!romFile) {
@@ -34,7 +26,7 @@ function openROM(e) {
     const reader = new FileReader();
     reader.onload = function(e) {
         const rom = new Uint8Array(e.target.result);
-        loadROM(rom);
+        nesty.load_rom(rom);
     };
 
     reader.readAsArrayBuffer(romFile);
@@ -50,7 +42,7 @@ function openROM2(romPath) {
     xhr.onload = function(e) {
         if (this.status == 200) {
             var rom = new Uint8Array(this.response);
-            loadROM(rom);
+            nesty.load_rom(rom);
         }
     }
 

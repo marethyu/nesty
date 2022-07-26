@@ -10,9 +10,8 @@ export class NestyWeb {
   static new(): NestyWeb;
 /**
 * @param {Uint8Array} rom_data
-* @returns {boolean}
 */
-  load_rom(rom_data: Uint8Array): boolean;
+  load_rom(rom_data: Uint8Array): void;
 /**
 */
   reset(): void;
@@ -41,7 +40,7 @@ export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_nestyweb_free: (a: number) => void;
   readonly nestyweb_new: () => number;
-  readonly nestyweb_load_rom: (a: number, b: number) => number;
+  readonly nestyweb_load_rom: (a: number, b: number) => void;
   readonly nestyweb_reset: (a: number) => void;
   readonly nestyweb_save_state: (a: number) => void;
   readonly nestyweb_load_state: (a: number) => void;

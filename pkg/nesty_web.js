@@ -231,11 +231,9 @@ export class NestyWeb {
     }
     /**
     * @param {Uint8Array} rom_data
-    * @returns {boolean}
     */
     load_rom(rom_data) {
-        const ret = wasm.nestyweb_load_rom(this.ptr, addHeapObject(rom_data));
-        return ret !== 0;
+        wasm.nestyweb_load_rom(this.ptr, addHeapObject(rom_data));
     }
     /**
     */

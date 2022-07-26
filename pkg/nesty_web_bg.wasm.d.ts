@@ -3,7 +3,7 @@
 export const memory: WebAssembly.Memory;
 export function __wbg_nestyweb_free(a: number): void;
 export function nestyweb_new(): number;
-export function nestyweb_load_rom(a: number, b: number): number;
+export function nestyweb_load_rom(a: number, b: number): void;
 export function nestyweb_reset(a: number): void;
 export function nestyweb_save_state(a: number): void;
 export function nestyweb_load_state(a: number): void;
