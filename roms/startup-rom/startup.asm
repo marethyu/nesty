@@ -53,10 +53,10 @@ copymap1:
 	dey
 	bne	copymap1
 
-; ネームテーブルへ転送("PLEASE LOAD A ROM FILE TO START")
+; ネームテーブルへ転送("LOAD A ROM FILE TO CONTINUE")
 	lda	#$21
 	sta	$2006
-	lda	#$E2
+	lda	#$E3
 	sta	$2006
 	ldx	#$00
 	ldy	#$1B		; 27文字表示
