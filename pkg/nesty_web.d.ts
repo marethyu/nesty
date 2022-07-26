@@ -26,10 +26,6 @@ export class NestyWeb {
 */
   update(): void;
 /**
-* @returns {Uint8Array}
-*/
-  pixel_buffer(): Uint8Array;
-/**
 * @param {number} keycode
 */
   press_key(keycode: number): void;
@@ -50,7 +46,6 @@ export interface InitOutput {
   readonly nestyweb_save_state: (a: number) => void;
   readonly nestyweb_load_state: (a: number) => void;
   readonly nestyweb_update: (a: number) => void;
-  readonly nestyweb_pixel_buffer: (a: number) => number;
   readonly nestyweb_press_key: (a: number, b: number) => void;
   readonly nestyweb_release_key: (a: number, b: number) => void;
   readonly __wbindgen_malloc: (a: number) => number;

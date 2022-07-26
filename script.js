@@ -3,43 +3,13 @@ import { NestyWeb, default as init } from './pkg/nesty_web.js';
 // Initialize wasm first
 await init('./pkg/nesty_web_bg.wasm');
 
-const SCREEN_WIDTH = 256;
-const SCREEN_HEIGHT = 240;
-
 const display = document.getElementById("display");
 const selector = document.getElementById("samples-select");
 
 const nesty = NestyWeb.new();
 
-function render() {
-    const canvas = document.createElement("canvas");
-    canvas.width = 256;
-    canvas.height = 240;
-
-    const ctx = canvas.getContext("2d");
-    const imageData = ctx.getImageData(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    const pixels = nesty.pixel_buffer();
-
-    for (let j = 0; j < SCREEN_HEIGHT; j++) {
-        for (let i = 0; i < SCREEN_WIDTH; i++) {
-            let data_offset = j * SCREEN_WIDTH * 4 + i * 4;
-            let pix_offset = j * SCREEN_WIDTH * 3 + i * 3;
-
-            imageData.data[data_offset + 0] = pixels[pix_offset + 0];
-            imageData.data[data_offset + 1] = pixels[pix_offset + 1];
-            imageData.data[data_offset + 2] = pixels[pix_offset + 2];
-            imageData.data[data_offset + 3] = 255;
-        }
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-    display.getContext("2d").drawImage(canvas, 0, 0, 512, 480);
-}
-
 function renderLoop() {
     nesty.update();
-    render();
-
     requestAnimationFrame(renderLoop);
 }
 

@@ -8,7 +8,6 @@ export function nestyweb_reset(a: number): void;
 export function nestyweb_save_state(a: number): void;
 export function nestyweb_load_state(a: number): void;
 export function nestyweb_update(a: number): void;
-export function nestyweb_pixel_buffer(a: number): number;
 export function nestyweb_press_key(a: number, b: number): void;
 export function nestyweb_release_key(a: number, b: number): void;
 export function __wbindgen_malloc(a: number): number;
