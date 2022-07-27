@@ -27,7 +27,7 @@ cargo run --release --bin nesty-desktop-sdl2
 
 See the README file in platform/web for more details.
 
-Keybindings:
+## Keybindings
 
 | Key | Control |
 | --- | --- |
