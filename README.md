@@ -33,10 +33,10 @@ See the README file in platform/web for more details.
 
 | Key | Control |
 | --- | --- |
-|<kbd>←</kbd>|Left|
-|<kbd>→</kbd>|Right|
-|<kbd>↑</kbd>|Up|
-|<kbd>↓</kbd>|Down|
+|<kbd>⇦</kbd>|Left|
+|<kbd>⇨</kbd>|Right|
+|<kbd>⇧</kbd>|Up|
+|<kbd>⇩</kbd>|Down|
 |<kbd>A</kbd>|A|
 |<kbd>S</kbd>|B|
 |<kbd>Space</kbd>|Select|
