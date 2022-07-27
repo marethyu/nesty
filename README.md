@@ -63,9 +63,11 @@ See the README file in platform/web for more details.
 - Run test ROMs
   * Pass ppuio cpu exec space test by implementing dummy reads
 - More mappers, esp MMC3
+  * Might need to reimplement PPU using pixel-by-pixel renderer
+  * Read https://www.nesdev.org/wiki/MMC3 and https://github.com/quackenbush/nestalgia/blob/master/docs/mappers/disch/004.txt
 - Run length encoding for savestates
 - Rewind
-- Add more features to the startup rom like flashing text
+- Add more features to the startup rom like flashing text and snake game
 - Better error handling for web
 - Improve webpage design
 - native windows gui kit
