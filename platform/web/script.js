@@ -56,9 +56,9 @@ function openROM2(romPath) {
 document.getElementById('rom-input').addEventListener('change', openROM, false);
 
 display.addEventListener('keydown', (event) => {
-    if (event.code == "KeyO")       nesty.save_state();
-    else if (event.code == "KeyP")  nesty.load_state();
-    else                            nesty.press_key(event.keyCode);
+    if (event.code == "F10")      nesty.save_state();
+    else if (event.code == "F11") nesty.load_state();
+    else                          nesty.press_key(event.keyCode);
 }, false);
 
 display.addEventListener('keyup', (event) => {
@@ -73,7 +73,7 @@ selector.addEventListener("change", () => {
 });
 
 window.addEventListener("keydown", function(e) {
-    if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
+    if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","F11"].indexOf(e.code) > -1) {
         e.preventDefault();
     }
 }, false);

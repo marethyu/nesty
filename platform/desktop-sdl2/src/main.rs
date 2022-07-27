@@ -51,11 +51,11 @@ pub fn main() {
             match event {
                 Event::Quit { .. } => process::exit(0),
                 Event::KeyDown { keycode, .. } => {
-                    if matches!(keycode.unwrap(), Keycode::I) {
+                    if matches!(keycode.unwrap(), Keycode::F9) {
                         nesty.open_rom();
-                    } else if matches!(keycode.unwrap(), Keycode::O) {
+                    } else if matches!(keycode.unwrap(), Keycode::F10) {
                         nesty.save_state();
-                    } else if matches!(keycode.unwrap(), Keycode::P) {
+                    } else if matches!(keycode.unwrap(), Keycode::F11) {
                         nesty.load_state();
                     } else {
                         nesty.press_key(keycode.unwrap());

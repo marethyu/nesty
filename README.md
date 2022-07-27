@@ -38,10 +38,10 @@ See the README file in platform/web for more details.
 |<kbd>A</kbd>|A|
 |<kbd>S</kbd>|B|
 |<kbd>Space</kbd>|Select|
-|<kbd>Return</kbd>|Start|
-|<kbd>I</kbd>|Open ROM (Desktop only)||
-|<kbd>O</kbd>|Save state|
-|<kbd>P</kbd>|Load state|
+|<kbd>Enter</kbd>|Start|
+|<kbd>F9</kbd>|Open ROM (Desktop only)||
+|<kbd>F10</kbd>|Save state|
+|<kbd>F11</kbd>|Load state|
 
 ## TODO
 
