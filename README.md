@@ -19,6 +19,8 @@ This is a WIP Nintendo Entertainment System emulator written from scratch in Rus
 
 ### Desktop SDL2
 
+Make sure you have SDL2 installed before running this command
+
 ```
 cargo run --release --bin nesty-desktop-sdl2
 ```
