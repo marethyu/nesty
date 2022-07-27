@@ -2,13 +2,16 @@
   <head>
     <title>NESTY</title>
     <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
+    <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
+    <link href="https://unpkg.com/nes.css@latest/css/nes.min.css" rel="stylesheet" />
     <link rel="stylesheet" type="text/css" href="style.css" />
   </head>
   <body>
+    <h1>NESTY</h1>
     <script type="module" src="./script.js"></script>
     <canvas id="display" width="512", height="480" tabindex=0></canvas>
     <div>
-      <button style="display:block;width:140px; height:20px;" onclick="document.getElementById('rom-input').click()">Open local .nes file</button>
+      <button id="open-rom-button" onclick="document.getElementById('rom-input').click()">Open local .nes file</button>
       <input type="file" accept=".nes" id="rom-input" style="display:none">
     </div>
     <div>
@@ -20,6 +23,58 @@
           <option value="sm-forever">Super Mario Forever</option>
         </select>
       </form>
+    </div>
+    <div>
+      <table>
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Control</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><kbd>←</kbd></td>
+            <td>Left</td>
+          </tr>
+          <tr>
+            <td><kbd>→</kbd></td>
+            <td>Right</td>
+          </tr>
+          <tr>
+            <td><kbd>↑</kbd></td>
+            <td>Up</td>
+          </tr>
+          <tr>
+            <td><kbd>↓</kbd></td>
+            <td>Down</td>
+          </tr>
+          <tr>
+            <td><kbd>A</kbd></td>
+            <td>A</td>
+          </tr>
+          <tr>
+            <td><kbd>S</kbd></td>
+            <td>B</td>
+          </tr>
+          <tr>
+            <td><kbd>Space</kbd></td>
+            <td>Select</td>
+          </tr>
+          <tr>
+            <td><kbd>Enter</kbd></td>
+            <td>Start</td>
+          </tr>
+          <tr>
+            <td><kbd>F10</kbd></td>
+            <td>Save state</td>
+          </tr>
+          <tr>
+            <td><kbd>F11</kbd></td>
+            <td>Load state</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </body>
 </html>

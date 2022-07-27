@@ -10,6 +10,25 @@ body {
     justify-content: center;
 }
 
+h1 {
+    font-size: 60;
+}
+
+table {
+    table-layout: fixed;
+    width: 400px;
+}
+
+table, th, td {
+    border: 1px solid black;
+}
+
+#open-rom-button {
+    display: block;
+    width: 360px;
+    height: 60px;
+}
+
 ::-webkit-scrollbar {
     display: none;
 }
