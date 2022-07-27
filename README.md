@@ -59,6 +59,7 @@ See the README file in platform/web for more details.
 ## TODO
 
 - Fix some PPU bugs
+  * Do something with these weird little shifts during horizontal scrolling
 - Run test ROMs
   * Pass ppuio cpu exec space test by implementing dummy reads
 - More mappers, esp MMC3
@@ -66,7 +67,7 @@ See the README file in platform/web for more details.
 - Rewind
 - Add more features to the startup rom like flashing text
 - Better error handling for web
-- Improve webpage design - try NES.css
+- Improve webpage design
 - native windows gui kit
 - imgui+wgpu for debugger frontend (might need to implement message queues using [std::sync::mpsc](https://doc.rust-lang.org/std/sync/mpsc/))
 - Nametable previews
