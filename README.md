@@ -1,6 +1,6 @@
 # Nesty
 
-This is a WIP Nintendo Entertainment System emulator written from scratch in Rust for the sake of fun and learning. ~~Originally, I wanted to build this emulator so I can finally beat [Super Mario Forever](https://www.youtube.com/watch?v=in6RZzdGki8) with savestates.~~ Available in both desktop and web. [Try the live demo here!](https://marethyu.github.io/nesty/)
+This is a Nintendo Entertainment System emulator written from scratch in Rust for the sake of fun and learning. ~~Originally, I wanted to build this emulator so I can finally beat [Super Mario Forever](https://www.youtube.com/watch?v=in6RZzdGki8) with savestates.~~ Available in both desktop and web. [Try the live demo here!](https://marethyu.github.io/nesty/)
 
 ## Features
 
@@ -9,6 +9,8 @@ This is a WIP Nintendo Entertainment System emulator written from scratch in Rus
 - Can emulate most NROM and MMC1 games to a reasonable accuracy and speed
 - The emulator can run in both desktop and web.
 - Savestates
+
+I pray that the future me will have some time to implement more features like debug views and SNES emulation support. Also hopefully Rust will finally have better and easy to use cross-platform GUI framework.
 
 ## Some demos
 
@@ -55,25 +57,6 @@ See the README file in platform/web for more details.
 - Legend of Zelda
 - Space Harrier
 - Pac-Man
-
-## TODO
-
-- Fix some PPU bugs
-  * Do something with these weird little shifts during horizontal scrolling
-- Run test ROMs
-  * Pass ppuio cpu exec space test by implementing dummy reads
-- More mappers, esp MMC3
-  * Might need to reimplement PPU using pixel-by-pixel renderer
-  * Read https://www.nesdev.org/wiki/MMC3 and https://github.com/quackenbush/nestalgia/blob/master/docs/mappers/disch/004.txt
-- Run length encoding for savestates
-- Rewind
-- Add more features to the startup rom like flashing text and snake game
-- Better error handling for web
-- Improve webpage design
-- native windows gui kit
-- imgui+wgpu for debugger frontend (might need to implement message queues using [std::sync::mpsc](https://doc.rust-lang.org/std/sync/mpsc/))
-- Nametable previews
-- SNES emulation support
 
 ## Credits
 
