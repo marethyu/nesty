@@ -43,6 +43,17 @@ See the README file in platform/web for more details.
 |<kbd>F10</kbd>|Save state|
 |<kbd>F11</kbd>|Load state|
 
+## Tested games
+
+- Donkey Kong
+- Mario Bros
+- Super Mario Bros
+- Super Mario Forever
+- Ice Climber
+- Legend of Zelda
+- Space Harrier
+- Pac-Man
+
 ## TODO
 
 - Fix some PPU bugs
