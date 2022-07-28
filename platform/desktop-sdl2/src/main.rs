@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"] /* Hide the console window when running the program */
+
 #[macro_use]
 extern crate lazy_static;
 
