@@ -11,6 +11,12 @@
 - Better error handling for web
 - Improve webpage design
 - native windows gui kit
-- imgui+wgpu for debugger frontend (might need to implement message queues using [std::sync::mpsc](https://doc.rust-lang.org/std/sync/mpsc/))
+- imgui+wgpu for debugger frontend
+  * https://doc.rust-lang.org/book/ch16-00-concurrency.html
+  * https://doc.rust-lang.org/std/sync/mpsc/
 - Nametable previews
 - SNES emulation support
+
+Fuck
+
+Next time: Reimplement everything from scratch and focus on cycle accuracy. Make sure that the emulator can run rad racer and battletoads. Use a completely different design pattern. Implement debugger as well.
