@@ -15,7 +15,10 @@ I pray that the future me will have some time to implement more features like de
 ## Some demos
 
 ![mario](media/mario.gif)
+
 ![space harrier](media/space-harrier.gif)
+
+![zelda](media/zelda.gif)
 
 ## Building
 
