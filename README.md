@@ -60,6 +60,15 @@ See the README file in platform/web for more details.
 - Space Harrier
 - Pac-Man
 
+## Important Notes
+
+- Do not expose the emulator to extreme heat, cold, noise, darkness, or direct sunlight.
+- Do not drink, eat, or smoke when using this software.
+- Sit upright and put your hands on the table.
+- Defragment your harddisk weekly.
+- Use specialized defragmentation tools.
+- This product may contain rude and disturbing language.
+
 ## Credits
 
 - Comprehensive 6502 reference: https://www.masswerk.at/6502/6502_instruction_set.html
